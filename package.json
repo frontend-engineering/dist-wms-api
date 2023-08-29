@@ -1,0 +1,16 @@
+{
+  "name": "wms-api",
+  "version": "0.0.1",
+  "start": "node main.js",
+  "dependencies": {
+    "@nestjs/common": "^9.0.0",
+    "@nestjs/core": "^9.0.0",
+    "@nestjs/platform-express": "^9.0.0",
+    "@nestjs/testing": "^9.0.0",
+    "class-validator": "^0.13.2",
+    "reflect-metadata": "^0.1.13",
+    "rxjs": "^7.0.0",
+    "tslib": "^2.3.0"
+  },
+  "main": "main.js"
+}
