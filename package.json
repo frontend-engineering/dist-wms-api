@@ -1,7 +1,9 @@
 {
   "name": "wms-api",
   "version": "0.0.1",
-  "start": "node main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
   "dependencies": {
     "@nestjs/common": "^9.0.0",
     "@nestjs/core": "^9.0.0",
