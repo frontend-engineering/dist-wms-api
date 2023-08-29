@@ -336,7 +336,7 @@ let DataService = DataService_1 = class DataService {
                 if (ret.length > 1) {
                     // 情况1：根据前一个 resource id 搜索 list
                     const pResource = ret[ret.length - 2];
-                    this.logger.log(` ---- ${resource}.findMany`);
+                    this.logger.log(`${resource}.findMany`);
                     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                     // @ts-ignore
                     return this.prisma[resource].findMany({
@@ -6160,7 +6160,8 @@ const common_1 = __webpack_require__("@nestjs/common");
 const core_1 = __webpack_require__("@nestjs/core");
 const app_module_1 = __webpack_require__("./src/app/app.module.ts");
 const http_proxy_middleware_1 = __webpack_require__("http-proxy-middleware");
-const API_SERVICE_URL = 'http://localhost:8070/';
+// todo: 先写死
+const API_SERVICE_URL = 'http://c7.jp1.flowda.cn/';
 function bootstrap() {
     return tslib_1.__awaiter(this, void 0, void 0, function* () {
         const app = yield core_1.NestFactory.create(app_module_1.AppModule);
