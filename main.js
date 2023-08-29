@@ -5855,7 +5855,7 @@ exports.zt = tslib_1.__importStar(__webpack_require__("../../libs/wms-types/src/
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ResourceTaskDefKeyRelationSchema = exports.ResourceTaskIdRelationSchema = exports.MemberInfoSchema = exports.TransactionIsolationLevelSchema = exports.SortOrderSchema = exports.ResourceTaskIdRelationScalarFieldEnumSchema = exports.ResourceTaskDefKeyRelationScalarFieldEnumSchema = exports.MemberInfoScalarFieldEnumSchema = void 0;
+exports.MemberInfoSchema = exports.ResourceTaskDefKeyRelationSchema = exports.ResourceTaskIdRelationSchema = exports.TransactionIsolationLevelSchema = exports.SortOrderSchema = exports.ResourceTaskIdRelationScalarFieldEnumSchema = exports.ResourceTaskDefKeyRelationScalarFieldEnumSchema = exports.MemberInfoScalarFieldEnumSchema = void 0;
 const zod_1 = __webpack_require__("zod");
 /////////////////////////////////////////
 // HELPER FUNCTIONS
@@ -5863,7 +5863,7 @@ const zod_1 = __webpack_require__("zod");
 /////////////////////////////////////////
 // ENUMS
 /////////////////////////////////////////
-exports.MemberInfoScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'gender', 'idNo']);
+exports.MemberInfoScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'gender']);
 exports.ResourceTaskDefKeyRelationScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'resource', 'taskDefKey']);
 exports.ResourceTaskIdRelationScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'taskId', 'processInstanceId']);
 exports.SortOrderSchema = zod_1.z.enum(['asc', 'desc']);
@@ -5871,18 +5871,6 @@ exports.TransactionIsolationLevelSchema = zod_1.z.enum(['ReadUncommitted', 'Read
 /////////////////////////////////////////
 // MODELS
 /////////////////////////////////////////
-/////////////////////////////////////////
-// MEMBER INFO SCHEMA
-/////////////////////////////////////////
-exports.MemberInfoSchema = zod_1.z.object({
-    id: zod_1.z.number().int(),
-    createdAt: zod_1.z.date(),
-    updatedAt: zod_1.z.date(),
-    isDeleted: zod_1.z.boolean(),
-    name: zod_1.z.string(),
-    gender: zod_1.z.string(),
-    idNo: zod_1.z.string(),
-}).openapi({ "display_name": "成员信息" });
 /////////////////////////////////////////
 // RESOURCE TASK ID RELATION SCHEMA
 /////////////////////////////////////////
@@ -5905,6 +5893,17 @@ exports.ResourceTaskDefKeyRelationSchema = zod_1.z.object({
     resource: zod_1.z.string(),
     taskDefKey: zod_1.z.string(),
 });
+/////////////////////////////////////////
+// MEMBER INFO SCHEMA
+/////////////////////////////////////////
+exports.MemberInfoSchema = zod_1.z.object({
+    id: zod_1.z.number().int(),
+    createdAt: zod_1.z.date(),
+    updatedAt: zod_1.z.date(),
+    isDeleted: zod_1.z.boolean(),
+    name: zod_1.z.string(),
+    gender: zod_1.z.string(),
+}).openapi({ "display_name": "成员信息" });
 
 
 /***/ }),
