@@ -1,0 +1,33 @@
+{
+  "scripts": {
+    "serve": "../../node_modules/.bin/dotenv -e .env.dev -- ../../node_modules/.bin/nx serve wms-api"
+  },
+  "name": "@flowda-projects/wms-api",
+  "dependencies": {
+    "@anatine/zod-openapi": "file:.yalc/@anatine/zod-openapi",
+    "@nestjs/common": "^9.0.0",
+    "@nestjs/core": "^9.0.0",
+    "@nestjs/passport": "^9.0.0",
+    "@nestjs/platform-express": "^9.0.0",
+    "@prisma/client": "^4.14.0",
+    "axios": "1.1.0",
+    "bcrypt": "^5.1.0",
+    "class-validator": "^0.13.2",
+    "http-proxy-middleware": "^2.0.6",
+    "inversify": "^6.0.1",
+    "jsonwebtoken": "^8.5.1",
+    "lodash": "^4.17.21",
+    "nestjs-zod": "^2.3.2",
+    "openapi3-ts": "^2.0.0 || ^3.0.0",
+    "passport": "^0.6.0",
+    "passport-jwt": "^4.0.1",
+    "passport-local": "^1.0.0",
+    "pluralize": "^8.0.0",
+    "prisma": "^4.14.0",
+    "reflect-metadata": "^0.1.13",
+    "rxjs": "^7.0.0",
+    "znv": "^0.4.0",
+    "zod": "3.21.1",
+    "tslib": "^2.3.0"
+  }
+}
