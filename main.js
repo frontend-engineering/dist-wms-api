@@ -174,12 +174,21 @@ exports.ServicesModule = ServicesModule;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserController = void 0;
 const tslib_1 = __webpack_require__("tslib");
 const common_1 = __webpack_require__("@nestjs/common");
 const userLocalAuth_guard_1 = __webpack_require__("./src/user/userLocalAuth.guard.ts");
+const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
+const nestjs_zod_1 = __webpack_require__("nestjs-zod");
 let UserController = class UserController {
+    constructor(service) {
+        this.service = service;
+    }
+    register(dto) {
+        return this.service.register(dto);
+    }
     login(req) {
         return req.user;
     }
@@ -193,6 +202,14 @@ let UserController = class UserController {
         };
     }
 };
+tslib_1.__decorate([
+    (0, common_1.Post)('register'),
+    (0, common_1.UsePipes)(nestjs_zod_1.ZodValidationPipe),
+    tslib_1.__param(0, (0, common_1.Body)()),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", [typeof (_b = typeof wms_services_1.RegisterDto !== "undefined" && wms_services_1.RegisterDto) === "function" ? _b : Object]),
+    tslib_1.__metadata("design:returntype", void 0)
+], UserController.prototype, "register", null);
 tslib_1.__decorate([
     (0, common_1.UseGuards)(userLocalAuth_guard_1.UserLocalAuthGuard),
     (0, common_1.Post)('login'),
@@ -209,7 +226,8 @@ tslib_1.__decorate([
     tslib_1.__metadata("design:returntype", void 0)
 ], UserController.prototype, "logout", null);
 UserController = tslib_1.__decorate([
-    (0, common_1.Controller)('user')
+    (0, common_1.Controller)('user'),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof wms_services_1.UserService !== "undefined" && wms_services_1.UserService) === "function" ? _a : Object])
 ], UserController);
 exports.UserController = UserController;
 
@@ -921,7 +939,7 @@ exports.matchPath = matchPath;
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CustomZodSchemaSymbol = exports.PrismaZodSchemaSymbol = exports.ServiceSymbol = exports.PrismaClientSymbol = void 0;
+exports.CustomError = exports.CustomZodSchemaSymbol = exports.PrismaZodSchemaSymbol = exports.ServiceSymbol = exports.PrismaClientSymbol = void 0;
 exports.PrismaClientSymbol = Symbol('PrismaClient');
 /**
  * getServices 方法会将 inversify module 转换成 nestjs module，这样 nestjs controller 就可以使用了
@@ -930,6 +948,120 @@ exports.PrismaClientSymbol = Symbol('PrismaClient');
 exports.ServiceSymbol = Symbol('Service');
 exports.PrismaZodSchemaSymbol = Symbol.for('PrismaZodSchema');
 exports.CustomZodSchemaSymbol = Symbol.for('CustomZodSchema');
+class CustomError extends Error {
+    constructor(errorCode, message, extraInfo) {
+        super(JSON.stringify({ errorCode, message }));
+        this.message = JSON.stringify({ errorCode, message, extra: extraInfo });
+    }
+}
+exports.CustomError = CustomError;
+
+
+/***/ }),
+
+/***/ "../../libs/prisma-wms/src/index.ts":
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.zt = void 0;
+const tslib_1 = __webpack_require__("tslib");
+const zod_openapi_1 = __webpack_require__("@anatine/zod-openapi");
+const zod_1 = __webpack_require__("zod");
+(0, zod_openapi_1.extendZodWithOpenApi)(zod_1.z);
+tslib_1.__exportStar(__webpack_require__("../../libs/prisma-wms/src/zod/index.ts"), exports);
+exports.zt = tslib_1.__importStar(__webpack_require__("../../libs/prisma-wms/src/zod/index.ts"));
+
+
+/***/ }),
+
+/***/ "../../libs/prisma-wms/src/zod/index.ts":
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UserProfileWithRelationsSchema = exports.UserProfileSchema = exports.UserWithRelationsSchema = exports.UserSchema = exports.MemberInfoSchema = exports.ResourceTaskDefKeyRelationSchema = exports.ResourceTaskIdRelationSchema = exports.UserStatusSchema = exports.UserScalarFieldEnumSchema = exports.UserProfileScalarFieldEnumSchema = exports.TransactionIsolationLevelSchema = exports.SortOrderSchema = exports.ResourceTaskIdRelationScalarFieldEnumSchema = exports.ResourceTaskDefKeyRelationScalarFieldEnumSchema = exports.MemberInfoScalarFieldEnumSchema = void 0;
+const zod_1 = __webpack_require__("zod");
+/////////////////////////////////////////
+// HELPER FUNCTIONS
+/////////////////////////////////////////
+/////////////////////////////////////////
+// ENUMS
+/////////////////////////////////////////
+exports.MemberInfoScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'gender']);
+exports.ResourceTaskDefKeyRelationScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'resource', 'taskDefKey']);
+exports.ResourceTaskIdRelationScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'taskId', 'processInstanceId']);
+exports.SortOrderSchema = zod_1.z.enum(['asc', 'desc']);
+exports.TransactionIsolationLevelSchema = zod_1.z.enum(['ReadUncommitted', 'ReadCommitted', 'RepeatableRead', 'Serializable']);
+exports.UserProfileScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'userId', 'fullName']);
+exports.UserScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'username', 'hashedPassword', 'hashedRefreshToken', 'status']);
+exports.UserStatusSchema = zod_1.z.enum(['ACTIVE', 'FORBIDDEN']);
+/////////////////////////////////////////
+// MODELS
+/////////////////////////////////////////
+/////////////////////////////////////////
+// RESOURCE TASK ID RELATION SCHEMA
+/////////////////////////////////////////
+exports.ResourceTaskIdRelationSchema = zod_1.z.object({
+    id: zod_1.z.number().int(),
+    createdAt: zod_1.z.date(),
+    updatedAt: zod_1.z.date(),
+    isDeleted: zod_1.z.boolean(),
+    taskId: zod_1.z.string(),
+    processInstanceId: zod_1.z.string(),
+});
+/////////////////////////////////////////
+// RESOURCE TASK DEF KEY RELATION SCHEMA
+/////////////////////////////////////////
+exports.ResourceTaskDefKeyRelationSchema = zod_1.z.object({
+    id: zod_1.z.number().int(),
+    createdAt: zod_1.z.date(),
+    updatedAt: zod_1.z.date(),
+    isDeleted: zod_1.z.boolean(),
+    resource: zod_1.z.string(),
+    taskDefKey: zod_1.z.string(),
+});
+/////////////////////////////////////////
+// MEMBER INFO SCHEMA
+/////////////////////////////////////////
+exports.MemberInfoSchema = zod_1.z.object({
+    id: zod_1.z.number().int(),
+    createdAt: zod_1.z.date(),
+    updatedAt: zod_1.z.date(),
+    isDeleted: zod_1.z.boolean(),
+    name: zod_1.z.string(),
+    gender: zod_1.z.string(),
+}).openapi({ "display_name": "成员信息" });
+/////////////////////////////////////////
+// USER SCHEMA
+/////////////////////////////////////////
+exports.UserSchema = zod_1.z.object({
+    status: exports.UserStatusSchema,
+    id: zod_1.z.number().int(),
+    createdAt: zod_1.z.date(),
+    updatedAt: zod_1.z.date(),
+    isDeleted: zod_1.z.boolean().nullable(),
+    username: zod_1.z.string(),
+    hashedPassword: zod_1.z.string(),
+    hashedRefreshToken: zod_1.z.string().nullable(),
+});
+exports.UserWithRelationsSchema = exports.UserSchema.merge(zod_1.z.object({
+    profile: zod_1.z.lazy(() => exports.UserProfileWithRelationsSchema).nullable(),
+}));
+/////////////////////////////////////////
+// USER PROFILE SCHEMA
+/////////////////////////////////////////
+exports.UserProfileSchema = zod_1.z.object({
+    id: zod_1.z.number().int(),
+    createdAt: zod_1.z.date(),
+    updatedAt: zod_1.z.date(),
+    isDeleted: zod_1.z.boolean().nullable(),
+    userId: zod_1.z.number().int(),
+    fullName: zod_1.z.string(),
+});
+exports.UserProfileWithRelationsSchema = exports.UserProfileSchema.merge(zod_1.z.object({
+    user: zod_1.z.lazy(() => exports.UserWithRelationsSchema),
+}));
 
 
 /***/ }),
@@ -940,9 +1072,34 @@ exports.CustomZodSchemaSymbol = Symbol.for('CustomZodSchema');
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const tslib_1 = __webpack_require__("tslib");
+const zod_openapi_1 = __webpack_require__("@anatine/zod-openapi");
+const zod_1 = __webpack_require__("zod");
+(0, zod_openapi_1.extendZodWithOpenApi)(zod_1.z);
 tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/wmsService.module.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/lib/schema.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/services/task.service.ts"), exports);
+tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/services/user.service.ts"), exports);
+
+
+/***/ }),
+
+/***/ "../../libs/wms-services/src/lib/error-code.ts":
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UserError = void 0;
+/* eslint-disable @typescript-eslint/no-namespace */
+const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
+var UserError;
+(function (UserError) {
+    class UserExist extends flowda_shared_1.CustomError {
+        constructor() {
+            super(1001, 'User exist');
+        }
+    }
+    UserError.UserExist = UserExist;
+})(UserError = exports.UserError || (exports.UserError = {}));
 
 
 /***/ }),
@@ -953,10 +1110,10 @@ tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/services/t
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResourceTaskDefKeyRelationResourceSchema = exports.TaskResourceSchema = exports.MemberInfoResourceSchema = void 0;
-const wms_types_1 = __webpack_require__("../../libs/wms-types/src/index.ts");
+const prisma_wms_1 = __webpack_require__("../../libs/prisma-wms/src/index.ts");
 const flowda_engine_1 = __webpack_require__("../../libs/flowda-engine/src/index.ts");
 const zod_1 = __webpack_require__("zod");
-exports.MemberInfoResourceSchema = wms_types_1.MemberInfoSchema.omit({
+exports.MemberInfoResourceSchema = prisma_wms_1.MemberInfoSchema.omit({
     isDeleted: true,
 }).extend({
     // motor-admin schema
@@ -983,7 +1140,7 @@ exports.TaskResourceSchema = zod_1.z
         prisma: false,
     }),
 });
-exports.ResourceTaskDefKeyRelationResourceSchema = wms_types_1.ResourceTaskDefKeyRelationSchema.omit({
+exports.ResourceTaskDefKeyRelationResourceSchema = prisma_wms_1.ResourceTaskDefKeyRelationSchema.omit({
     isDeleted: true,
 }).extend({
     // motor-admin schema
@@ -1070,6 +1227,67 @@ exports.TaskService = TaskService;
 
 /***/ }),
 
+/***/ "../../libs/wms-services/src/services/user.service.ts":
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UserService = exports.RegisterDto = exports.registerSchema = void 0;
+const tslib_1 = __webpack_require__("tslib");
+const inversify_1 = __webpack_require__("inversify");
+const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
+const db = tslib_1.__importStar(__webpack_require__("@prisma/client-wms"));
+const zod_1 = __webpack_require__("zod");
+const nestjs_zod_1 = __webpack_require__("nestjs-zod");
+const error_code_1 = __webpack_require__("../../libs/wms-services/src/lib/error-code.ts");
+const bcrypt = tslib_1.__importStar(__webpack_require__("bcrypt"));
+exports.registerSchema = zod_1.z.object({
+    username: zod_1.z.string(),
+    password: zod_1.z.string(),
+});
+class RegisterDto extends (0, nestjs_zod_1.createZodDto)(exports.registerSchema) {
+}
+exports.RegisterDto = RegisterDto;
+let UserService = class UserService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    register(dto) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            const user = yield this.prisma.user.findFirst({
+                where: {
+                    username: dto.username,
+                },
+            });
+            if (user)
+                throw new error_code_1.UserError.UserExist();
+            const hashedPassword = yield bcrypt.hash(dto.password, 10);
+            const aUser = yield this.prisma.user.create({
+                data: {
+                    username: dto.username,
+                    hashedPassword: hashedPassword,
+                    hashedRefreshToken: null,
+                    status: db.UserStatus.ACTIVE,
+                },
+            });
+            return {
+                id: aUser.id,
+                username: aUser.username,
+            };
+        });
+    }
+};
+UserService = tslib_1.__decorate([
+    (0, inversify_1.injectable)(),
+    tslib_1.__param(0, (0, inversify_1.inject)(flowda_shared_1.PrismaClientSymbol)),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof db !== "undefined" && db.PrismaClient) === "function" ? _a : Object])
+], UserService);
+exports.UserService = UserService;
+
+
+/***/ }),
+
 /***/ "../../libs/wms-services/src/wmsService.module.ts":
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -1079,118 +1297,16 @@ exports.wmsServiceModule = void 0;
 const tslib_1 = __webpack_require__("tslib");
 const inversify_1 = __webpack_require__("inversify");
 const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
-const wms_types_1 = __webpack_require__("../../libs/wms-types/src/index.ts");
+const prisma_wms_1 = __webpack_require__("../../libs/prisma-wms/src/index.ts");
 const schema = tslib_1.__importStar(__webpack_require__("../../libs/wms-services/src/lib/schema.ts"));
 const task_service_1 = __webpack_require__("../../libs/wms-services/src/services/task.service.ts");
+const user_service_1 = __webpack_require__("../../libs/wms-services/src/services/user.service.ts");
 exports.wmsServiceModule = new inversify_1.ContainerModule((bind) => {
-    bind(flowda_shared_1.PrismaZodSchemaSymbol).toConstantValue(wms_types_1.zt);
+    bind(flowda_shared_1.PrismaZodSchemaSymbol).toConstantValue(prisma_wms_1.zt);
     bind(flowda_shared_1.CustomZodSchemaSymbol).toConstantValue(schema);
     (0, flowda_shared_1.bindService)(bind, flowda_shared_1.ServiceSymbol, task_service_1.TaskService);
+    (0, flowda_shared_1.bindService)(bind, flowda_shared_1.ServiceSymbol, user_service_1.UserService);
 });
-
-
-/***/ }),
-
-/***/ "../../libs/wms-types/src/index.ts":
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.zt = void 0;
-const tslib_1 = __webpack_require__("tslib");
-tslib_1.__exportStar(__webpack_require__("../../libs/wms-types/src/zod/index.ts"), exports);
-exports.zt = tslib_1.__importStar(__webpack_require__("../../libs/wms-types/src/zod/index.ts"));
-
-
-/***/ }),
-
-/***/ "../../libs/wms-types/src/zod/index.ts":
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.UserProfileWithRelationsSchema = exports.UserProfileSchema = exports.UserWithRelationsSchema = exports.UserSchema = exports.MemberInfoSchema = exports.ResourceTaskDefKeyRelationSchema = exports.ResourceTaskIdRelationSchema = exports.UserStatusSchema = exports.UserScalarFieldEnumSchema = exports.UserProfileScalarFieldEnumSchema = exports.TransactionIsolationLevelSchema = exports.SortOrderSchema = exports.ResourceTaskIdRelationScalarFieldEnumSchema = exports.ResourceTaskDefKeyRelationScalarFieldEnumSchema = exports.MemberInfoScalarFieldEnumSchema = void 0;
-const zod_1 = __webpack_require__("zod");
-/////////////////////////////////////////
-// HELPER FUNCTIONS
-/////////////////////////////////////////
-/////////////////////////////////////////
-// ENUMS
-/////////////////////////////////////////
-exports.MemberInfoScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'gender']);
-exports.ResourceTaskDefKeyRelationScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'resource', 'taskDefKey']);
-exports.ResourceTaskIdRelationScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'taskId', 'processInstanceId']);
-exports.SortOrderSchema = zod_1.z.enum(['asc', 'desc']);
-exports.TransactionIsolationLevelSchema = zod_1.z.enum(['ReadUncommitted', 'ReadCommitted', 'RepeatableRead', 'Serializable']);
-exports.UserProfileScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'userId', 'fullName']);
-exports.UserScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'username', 'hashedPassword', 'hashedRefreshToken', 'status']);
-exports.UserStatusSchema = zod_1.z.enum(['ACTIVE', 'FORBIDDEN']);
-/////////////////////////////////////////
-// MODELS
-/////////////////////////////////////////
-/////////////////////////////////////////
-// RESOURCE TASK ID RELATION SCHEMA
-/////////////////////////////////////////
-exports.ResourceTaskIdRelationSchema = zod_1.z.object({
-    id: zod_1.z.number().int(),
-    createdAt: zod_1.z.date(),
-    updatedAt: zod_1.z.date(),
-    isDeleted: zod_1.z.boolean(),
-    taskId: zod_1.z.string(),
-    processInstanceId: zod_1.z.string(),
-});
-/////////////////////////////////////////
-// RESOURCE TASK DEF KEY RELATION SCHEMA
-/////////////////////////////////////////
-exports.ResourceTaskDefKeyRelationSchema = zod_1.z.object({
-    id: zod_1.z.number().int(),
-    createdAt: zod_1.z.date(),
-    updatedAt: zod_1.z.date(),
-    isDeleted: zod_1.z.boolean(),
-    resource: zod_1.z.string(),
-    taskDefKey: zod_1.z.string(),
-});
-/////////////////////////////////////////
-// MEMBER INFO SCHEMA
-/////////////////////////////////////////
-exports.MemberInfoSchema = zod_1.z.object({
-    id: zod_1.z.number().int(),
-    createdAt: zod_1.z.date(),
-    updatedAt: zod_1.z.date(),
-    isDeleted: zod_1.z.boolean(),
-    name: zod_1.z.string(),
-    gender: zod_1.z.string(),
-}).openapi({ "display_name": "成员信息" });
-/////////////////////////////////////////
-// USER SCHEMA
-/////////////////////////////////////////
-exports.UserSchema = zod_1.z.object({
-    status: exports.UserStatusSchema,
-    id: zod_1.z.number().int(),
-    createdAt: zod_1.z.date(),
-    updatedAt: zod_1.z.date(),
-    isDeleted: zod_1.z.boolean().nullable(),
-    username: zod_1.z.string(),
-    hashedPassword: zod_1.z.string(),
-    hashedRefreshToken: zod_1.z.string(),
-});
-exports.UserWithRelationsSchema = exports.UserSchema.merge(zod_1.z.object({
-    profile: zod_1.z.lazy(() => exports.UserProfileWithRelationsSchema).nullable(),
-}));
-/////////////////////////////////////////
-// USER PROFILE SCHEMA
-/////////////////////////////////////////
-exports.UserProfileSchema = zod_1.z.object({
-    id: zod_1.z.number().int(),
-    createdAt: zod_1.z.date(),
-    updatedAt: zod_1.z.date(),
-    isDeleted: zod_1.z.boolean().nullable(),
-    userId: zod_1.z.number().int(),
-    fullName: zod_1.z.string(),
-});
-exports.UserProfileWithRelationsSchema = exports.UserProfileSchema.merge(zod_1.z.object({
-    user: zod_1.z.lazy(() => exports.UserWithRelationsSchema),
-}));
 
 
 /***/ }),
@@ -1237,6 +1353,13 @@ module.exports = require("axios");
 
 /***/ }),
 
+/***/ "bcrypt":
+/***/ ((module) => {
+
+module.exports = require("bcrypt");
+
+/***/ }),
+
 /***/ "http-proxy-middleware":
 /***/ ((module) => {
 
@@ -1255,6 +1378,13 @@ module.exports = require("inversify");
 /***/ ((module) => {
 
 module.exports = require("lodash");
+
+/***/ }),
+
+/***/ "nestjs-zod":
+/***/ ((module) => {
+
+module.exports = require("nestjs-zod");
 
 /***/ }),
 
