@@ -30,7 +30,7 @@ tslib_1.__decorate([
     tslib_1.__metadata("design:returntype", void 0)
 ], AppController.prototype, "hi", null);
 tslib_1.__decorate([
-    (0, common_1.Post)('/getSchema'),
+    (0, common_1.Get)('/getSchema'),
     tslib_1.__metadata("design:type", Function),
     tslib_1.__metadata("design:paramtypes", []),
     tslib_1.__metadata("design:returntype", void 0)
@@ -103,6 +103,7 @@ let AppExceptionFilter = AppExceptionFilter_1 = class AppExceptionFilter {
         let code;
         let message;
         let status;
+        let stack;
         // 如果是 CustomError 提取 errorCode + message, 200
         if (exception instanceof flowda_shared_1.CustomError) {
             const rt = JSON.parse(exception.message);
@@ -114,6 +115,7 @@ let AppExceptionFilter = AppExceptionFilter_1 = class AppExceptionFilter {
             // 如果是一般 Error，提取 message，errorCode 继续 undef
             message = exception.message;
             status = common_1.HttpStatus.INTERNAL_SERVER_ERROR;
+            stack = exception.stack;
         }
         // 如果是 HttpException，则重新赋值下 status
         if (exception instanceof common_1.HttpException) {
@@ -134,6 +136,12 @@ let AppExceptionFilter = AppExceptionFilter_1 = class AppExceptionFilter {
             code = status;
             message = exception.message;
         }
+        this.logger.error({
+            code: code,
+            message: message,
+            stack: stack,
+            timestamp: new Date().toISOString(),
+        });
         response.status(status).json({
             code: code,
             message: message,
@@ -1072,13 +1080,14 @@ exports.matchPath = matchPath;
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CustomError = exports.CustomZodSchemaSymbol = exports.PrismaZodSchemaSymbol = exports.ServiceSymbol = exports.PrismaClientSymbol = void 0;
+exports.CustomError = exports.CustomZodSchemaSymbol = exports.PrismaZodSchemaSymbol = exports.APISymbol = exports.ServiceSymbol = exports.PrismaClientSymbol = void 0;
 exports.PrismaClientSymbol = Symbol('PrismaClient');
 /**
  * getServices 方法会将 inversify module 转换成 nestjs module，这样 nestjs controller 就可以使用了
  * 所以，注意：如果不需要给 controller 使用，则不需要 bind
  */
 exports.ServiceSymbol = Symbol('Service');
+exports.APISymbol = Symbol('API');
 exports.PrismaZodSchemaSymbol = Symbol.for('PrismaZodSchema');
 exports.CustomZodSchemaSymbol = Symbol.for('CustomZodSchema');
 class CustomError extends Error {
@@ -1307,11 +1316,13 @@ exports.WMS_ENV = void 0;
 const znv_1 = __webpack_require__("znv");
 const zod_1 = __webpack_require__("zod");
 exports.WMS_ENV = (0, znv_1.parseEnv)(process.env, {
+    TEST_ENV: zod_1.z.string().optional(),
     DATABASE_URL: zod_1.z.string().min(1),
     REFRESH_TOKEN_SECRET: zod_1.z.string().min(1),
     REFRESH_TOKEN_EXPIRE: zod_1.z.number().default(7 * 24 * 60 * 60),
     ACCESS_TOKEN_SECRET: zod_1.z.string().min(1),
     ACCESS_TOKEN_EXPIRE: zod_1.z.number().default(15 * 60),
+    C7_REST_URL: zod_1.z.string().min(1),
 });
 
 
@@ -1330,14 +1341,14 @@ const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.
 const db = tslib_1.__importStar(__webpack_require__("@prisma/client-wms"));
 const axios_1 = tslib_1.__importDefault(__webpack_require__("axios"));
 const _ = tslib_1.__importStar(__webpack_require__("lodash"));
-const REST_URL = 'http://localhost:8070/engine-rest';
+const wms_env_1 = __webpack_require__("../../libs/wms-services/src/lib/wms-env.ts");
 let TaskService = class TaskService {
     constructor(prisma) {
         this.prisma = prisma;
     }
     get(taskId) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            const res = yield axios_1.default.get(REST_URL + `/task/${taskId}`);
+            const res = yield axios_1.default.get(wms_env_1.WMS_ENV.C7_REST_URL + `/task/${taskId}`);
             const taskDefinitionKey = res.data.taskDefinitionKey;
             const rel = yield this.prisma.resourceTaskDefKeyRelation.findUnique({
                 where: {
@@ -1363,7 +1374,7 @@ let TaskService = class TaskService {
                 data: data,
             });
             try {
-                const ret2 = yield axios_1.default.post(REST_URL + `/task/${taskId}/complete`, {}, {
+                const ret2 = yield axios_1.default.post(wms_env_1.WMS_ENV.C7_REST_URL + `/task/${taskId}/complete`, {}, {
                     headers: {
                         'Content-Type': 'application/json',
                         Accept: 'application/json',
@@ -1409,6 +1420,7 @@ const error_code_1 = __webpack_require__("../../libs/wms-services/src/lib/error-
 const bcrypt = tslib_1.__importStar(__webpack_require__("bcrypt"));
 const jwt = tslib_1.__importStar(__webpack_require__("jsonwebtoken"));
 const wms_env_1 = __webpack_require__("../../libs/wms-services/src/lib/wms-env.ts");
+const axios_1 = tslib_1.__importDefault(__webpack_require__("axios"));
 exports.registerSchema = zod_1.z.object({
     username: zod_1.z.string(),
     password: zod_1.z.string(),
@@ -1429,6 +1441,18 @@ let UserService = class UserService {
             });
             if (user)
                 throw new error_code_1.UserError.UserExist();
+            // 同步到 c7
+            // todo: 涉及到外部依赖，进行 mock，暂时先用 env
+            if (wms_env_1.WMS_ENV.TEST_ENV !== 'yes') {
+                yield axios_1.default.post(wms_env_1.WMS_ENV.C7_REST_URL + `/user/create`, {
+                    profile: {
+                        id: dto.username,
+                    },
+                    credentials: {
+                        password: dto.password,
+                    },
+                });
+            }
             const hashedPassword = yield bcrypt.hash(dto.password, 10);
             const aUser = yield this.prisma.user.create({
                 data: {
@@ -1480,6 +1504,9 @@ let UserService = class UserService {
             iat: decode.iat,
             exp: decode.exp,
         };
+    }
+    verifyAccessToken(at) {
+        return jwt.verify(at, wms_env_1.WMS_ENV.ACCESS_TOKEN_SECRET);
     }
 };
 UserService = tslib_1.__decorate([
@@ -1683,20 +1710,54 @@ const common_1 = __webpack_require__("@nestjs/common");
 const core_1 = __webpack_require__("@nestjs/core");
 const app_module_1 = __webpack_require__("./src/app/app.module.ts");
 const http_proxy_middleware_1 = __webpack_require__("http-proxy-middleware");
-// todo: 先写死
-const API_SERVICE_URL = 'http://c7.jp1.flowda.cn/';
+const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
+const passport_jwt_1 = __webpack_require__("passport-jwt");
 function bootstrap() {
     return tslib_1.__awaiter(this, void 0, void 0, function* () {
         const app = yield core_1.NestFactory.create(app_module_1.AppModule);
         app.enableCors();
         const globalPrefix = 'api';
         app.setGlobalPrefix(globalPrefix);
+        const user = app.get(wms_services_1.UserService);
+        // 额外处理 c7 代理权限
+        app.use((req, res, next) => {
+            if (req.url.indexOf('/api/camunda/engine-rest/') > -1) {
+                const extract = passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken();
+                const bearerToken = extract(req);
+                if (bearerToken) {
+                    try {
+                        const authed = user.verifyAccessToken(bearerToken);
+                        if (authed) {
+                            next();
+                        }
+                        else {
+                            res.status(401).json({
+                                message: '[PROXY] Unauthorized',
+                            });
+                        }
+                    }
+                    catch (e) {
+                        res.status(401).json({
+                            message: '[PROXY] Unauthorized',
+                        });
+                    }
+                }
+                else {
+                    res.status(401).json({
+                        message: '[PROXY] Unauthorized',
+                    });
+                }
+            }
+            else {
+                next();
+            }
+        });
         // Proxy endpoints
         app.use('/api/camunda/engine-rest/', (0, http_proxy_middleware_1.createProxyMiddleware)({
-            target: API_SERVICE_URL,
+            target: wms_services_1.WMS_ENV.C7_REST_URL,
             changeOrigin: true,
             pathRewrite: {
-                [`^/api/camunda`]: '',
+                [`^/api/camunda/engine-rest/`]: '',
             },
         }));
         const port = process.env.PORT || 3344;
