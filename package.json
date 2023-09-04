@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "serve": "../../node_modules/.bin/dotenv -e .env.dev -- ../../node_modules/.bin/nx serve wms-api"
+    "serve": "../../node_modules/.bin/dotenv -e .env.dev -- ../../node_modules/.bin/nx run wms-api:serve",
+    "serve:prod": "../../node_modules/.bin/dotenv -e .env.dev -- ../../node_modules/.bin/nx run wms-api:serve:production"
   },
   "name": "@flowda-projects/wms-api",
   "dependencies": {

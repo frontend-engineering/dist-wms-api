@@ -375,6 +375,7 @@ exports.UserJwtAuthGuard = UserJwtAuthGuard;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+var UserLocalStrategy_1;
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserLocalStrategy = void 0;
@@ -383,25 +384,33 @@ const passport_1 = __webpack_require__("@nestjs/passport");
 const passport_local_1 = __webpack_require__("passport-local");
 const common_1 = __webpack_require__("@nestjs/common");
 const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
-let UserLocalStrategy = class UserLocalStrategy extends (0, passport_1.PassportStrategy)(passport_local_1.Strategy, 'userLocal') {
+let UserLocalStrategy = UserLocalStrategy_1 = class UserLocalStrategy extends (0, passport_1.PassportStrategy)(passport_local_1.Strategy, 'userLocal') {
     constructor(user) {
         super({
             usernameField: 'username',
             passwordField: 'password',
         });
         this.user = user;
+        this.logger = new common_1.Logger(UserLocalStrategy_1.name);
     }
     validate(username, password) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            const { at, rt } = yield this.user.validate(username, password);
-            return {
-                access_token: at,
-                refresh_token: rt,
-            };
+            // eslint-disable-next-line no-useless-catch
+            try {
+                const { at, rt } = yield this.user.validate(username, password);
+                this.logger.log('valiate pass:' + username);
+                return {
+                    access_token: at,
+                    refresh_token: rt,
+                };
+            }
+            catch (e) {
+                return false;
+            }
         });
     }
 };
-UserLocalStrategy = tslib_1.__decorate([
+UserLocalStrategy = UserLocalStrategy_1 = tslib_1.__decorate([
     (0, common_1.Injectable)(),
     tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof wms_services_1.UserService !== "undefined" && wms_services_1.UserService) === "function" ? _a : Object])
 ], UserLocalStrategy);
@@ -1407,6 +1416,7 @@ exports.TaskService = TaskService;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+var UserService_1;
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserService = exports.RegisterDto = exports.registerSchema = void 0;
@@ -1428,9 +1438,10 @@ exports.registerSchema = zod_1.z.object({
 class RegisterDto extends (0, nestjs_zod_1.createZodDto)(exports.registerSchema) {
 }
 exports.RegisterDto = RegisterDto;
-let UserService = class UserService {
-    constructor(prisma) {
+let UserService = UserService_1 = class UserService {
+    constructor(prisma, loggerFactory) {
         this.prisma = prisma;
+        this.logger = loggerFactory(UserService_1.name);
     }
     register(dto) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
@@ -1439,19 +1450,27 @@ let UserService = class UserService {
                     username: dto.username,
                 },
             });
-            if (user)
+            if (user) {
+                this.logger.warn('User exist:' + dto.username);
                 throw new error_code_1.UserError.UserExist();
+            }
             // 同步到 c7
             // todo: 涉及到外部依赖，进行 mock，暂时先用 env
             if (wms_env_1.WMS_ENV.TEST_ENV !== 'yes') {
-                yield axios_1.default.post(wms_env_1.WMS_ENV.C7_REST_URL + `/user/create`, {
-                    profile: {
-                        id: dto.username,
-                    },
-                    credentials: {
-                        password: dto.password,
-                    },
-                });
+                try {
+                    yield axios_1.default.post(wms_env_1.WMS_ENV.C7_REST_URL + `/user/create`, {
+                        profile: {
+                            id: dto.username,
+                        },
+                        credentials: {
+                            password: dto.password,
+                        },
+                    });
+                }
+                catch (e) {
+                    this.logger.error('call c7 failed:/user/create:' + dto.username);
+                    throw e;
+                }
             }
             const hashedPassword = yield bcrypt.hash(dto.password, 10);
             const aUser = yield this.prisma.user.create({
@@ -1475,11 +1494,15 @@ let UserService = class UserService {
                     username: username,
                 },
             });
-            if (!user)
+            if (!user) {
+                this.logger.warn('User not exist:' + username);
                 throw new error_code_1.UserError.UserNotExist();
+            }
             const match = yield bcrypt.compare(password, user.hashedPassword);
-            if (!match)
+            if (!match) {
+                this.logger.warn('Username and password mismatch:' + username);
                 throw new error_code_1.UserError.UserNamePasswordMismatch();
+            }
             const payload = { uid: user.id };
             const rt = this.generateJwt(payload, wms_env_1.WMS_ENV.REFRESH_TOKEN_SECRET, wms_env_1.WMS_ENV.REFRESH_TOKEN_EXPIRE);
             user.hashedRefreshToken = rt.token;
@@ -1509,10 +1532,11 @@ let UserService = class UserService {
         return jwt.verify(at, wms_env_1.WMS_ENV.ACCESS_TOKEN_SECRET);
     }
 };
-UserService = tslib_1.__decorate([
+UserService = UserService_1 = tslib_1.__decorate([
     (0, inversify_1.injectable)(),
     tslib_1.__param(0, (0, inversify_1.inject)(flowda_shared_1.PrismaClientSymbol)),
-    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof db !== "undefined" && db.PrismaClient) === "function" ? _a : Object])
+    tslib_1.__param(1, (0, inversify_1.inject)('Factory<Logger>')),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof db !== "undefined" && db.PrismaClient) === "function" ? _a : Object, Function])
 ], UserService);
 exports.UserService = UserService;
 
