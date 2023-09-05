@@ -127,25 +127,21 @@ let AppExceptionFilter = AppExceptionFilter_1 = class AppExceptionFilter {
             }
         }
         if (exception instanceof common_1.UnauthorizedException) {
-            status = exception.getStatus();
-            code = status;
+            code = exception.getStatus();
             message = exception.message;
         }
         if (exception instanceof nestjs_zod_1.ZodValidationException) {
-            status = exception.getStatus();
-            code = status;
+            code = exception.getStatus();
             message = exception.message;
         }
         this.logger.error({
             code: code,
             message: message,
             stack: stack,
-            timestamp: new Date().toISOString(),
         });
         response.status(status).json({
             code: code,
             message: message,
-            timestamp: new Date().toISOString(),
         });
     }
 };
@@ -259,6 +255,7 @@ exports.ServicesModule = ServicesModule;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+var UserController_1;
 var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserController = void 0;
@@ -268,9 +265,10 @@ const userLocalAuth_guard_1 = __webpack_require__("./src/user/userLocalAuth.guar
 const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
 const nestjs_zod_1 = __webpack_require__("nestjs-zod");
 const userJwtAuth_guard_1 = __webpack_require__("./src/user/userJwtAuth.guard.ts");
-let UserController = class UserController {
+let UserController = UserController_1 = class UserController {
     constructor(service) {
         this.service = service;
+        this.logger = new common_1.Logger(UserController_1.name);
     }
     register(dto) {
         return this.service.register(dto);
@@ -296,6 +294,7 @@ tslib_1.__decorate([
 tslib_1.__decorate([
     (0, common_1.UseGuards)(userLocalAuth_guard_1.UserLocalAuthGuard),
     (0, common_1.Post)('login'),
+    (0, common_1.HttpCode)(200),
     tslib_1.__param(0, (0, common_1.Request)()),
     tslib_1.__metadata("design:type", Function),
     tslib_1.__metadata("design:paramtypes", [Object]),
@@ -309,7 +308,7 @@ tslib_1.__decorate([
     tslib_1.__metadata("design:paramtypes", [Object]),
     tslib_1.__metadata("design:returntype", void 0)
 ], UserController.prototype, "logout", null);
-UserController = tslib_1.__decorate([
+UserController = UserController_1 = tslib_1.__decorate([
     (0, common_1.Controller)('user'),
     tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof wms_services_1.UserService !== "undefined" && wms_services_1.UserService) === "function" ? _a : Object])
 ], UserController);
@@ -397,12 +396,9 @@ let UserLocalStrategy = UserLocalStrategy_1 = class UserLocalStrategy extends (0
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
             // eslint-disable-next-line no-useless-catch
             try {
-                const { at, rt } = yield this.user.validate(username, password);
+                const tokens = yield this.user.validate(username, password);
                 this.logger.log('valiate pass:' + username);
-                return {
-                    access_token: at,
-                    refresh_token: rt,
-                };
+                return tokens;
             }
             catch (e) {
                 return false;
@@ -1512,8 +1508,8 @@ let UserService = UserService_1 = class UserService {
             });
             const at = this.generateJwt(payload, wms_env_1.WMS_ENV.ACCESS_TOKEN_SECRET, wms_env_1.WMS_ENV.ACCESS_TOKEN_EXPIRE);
             return {
-                rt: rt.token,
-                at: at.token,
+                refresh_token: rt.token,
+                access_token: at.token,
             };
         });
     }
