@@ -72,12 +72,13 @@ const user_controller_1 = __webpack_require__("./src/user/user.controller.ts");
 const userLocal_strategy_1 = __webpack_require__("./src/user/userLocal.strategy.ts");
 const appExceptionFilter_1 = __webpack_require__("./src/app/appExceptionFilter.ts");
 const userJwt_strategy_1 = __webpack_require__("./src/user/userJwt.strategy.ts");
+const process_controller_1 = __webpack_require__("./src/app/process.controller.ts");
 let AppModule = class AppModule {
 };
 AppModule = tslib_1.__decorate([
     (0, common_1.Module)({
         imports: [services_module_1.ServicesModule],
-        controllers: [app_controller_1.AppController, flowda_engine_1.DataController, task_controller_1.TaskController, user_controller_1.UserController],
+        controllers: [app_controller_1.AppController, flowda_engine_1.DataController, task_controller_1.TaskController, user_controller_1.UserController, process_controller_1.ProcessController],
         providers: [
             {
                 provide: core_1.APP_FILTER,
@@ -164,6 +165,46 @@ exports.AppExceptionFilter = AppExceptionFilter;
 
 /***/ }),
 
+/***/ "./src/app/process.controller.ts":
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+var ProcessController_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProcessController = void 0;
+const tslib_1 = __webpack_require__("tslib");
+const common_1 = __webpack_require__("@nestjs/common");
+const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
+const userJwtAuth_guard_1 = __webpack_require__("./src/user/userJwtAuth.guard.ts");
+let ProcessController = ProcessController_1 = class ProcessController {
+    constructor(taskService) {
+        this.taskService = taskService;
+        this.logger = new common_1.Logger(ProcessController_1.name);
+    }
+    startTask(req, key) {
+        this.logger.log(req.user);
+        return this.taskService.start(key, req.user.uid);
+    }
+};
+tslib_1.__decorate([
+    (0, common_1.UseGuards)(userJwtAuth_guard_1.UserJwtAuthGuard),
+    (0, common_1.Post)('/:key/start'),
+    tslib_1.__param(0, (0, common_1.Req)()),
+    tslib_1.__param(1, (0, common_1.Param)('key')),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", [Object, String]),
+    tslib_1.__metadata("design:returntype", void 0)
+], ProcessController.prototype, "startTask", null);
+ProcessController = ProcessController_1 = tslib_1.__decorate([
+    (0, common_1.Controller)('/process'),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof wms_services_1.TaskService !== "undefined" && wms_services_1.TaskService) === "function" ? _a : Object])
+], ProcessController);
+exports.ProcessController = ProcessController;
+
+
+/***/ }),
+
 /***/ "./src/app/task.controller.ts":
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -179,7 +220,10 @@ let TaskController = class TaskController {
         this.taskService = taskService;
     }
     getTaskForm(taskId) {
-        return this.taskService.get(taskId);
+        return this.taskService.getTaskForm(taskId);
+    }
+    getTask(taskId) {
+        return this.taskService.getTask(taskId);
     }
     completeTask(taskId, body) {
         return this.taskService.complete(taskId, body);
@@ -192,6 +236,13 @@ tslib_1.__decorate([
     tslib_1.__metadata("design:paramtypes", [String]),
     tslib_1.__metadata("design:returntype", void 0)
 ], TaskController.prototype, "getTaskForm", null);
+tslib_1.__decorate([
+    (0, common_1.Get)('/:taskId'),
+    tslib_1.__param(0, (0, common_1.Param)('taskId')),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", [String]),
+    tslib_1.__metadata("design:returntype", void 0)
+], TaskController.prototype, "getTask", null);
 tslib_1.__decorate([
     (0, common_1.Post)('/:taskId/complete'),
     tslib_1.__param(0, (0, common_1.Param)('taskId')),
@@ -574,7 +625,6 @@ exports.DataService = void 0;
 const tslib_1 = __webpack_require__("tslib");
 const inversify_1 = __webpack_require__("inversify");
 const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
-const flowda_shared_2 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
 const _ = tslib_1.__importStar(__webpack_require__("lodash"));
 /*
 todo: 增加 reference_type 区分是如何做 nest
@@ -592,77 +642,92 @@ let DataService = DataService_1 = class DataService {
         }, {});
     }
     get(pathname, query) {
-        const ret = (0, flowda_shared_2.matchPath)(pathname);
-        if (ret.length === 0) {
-            return {};
-        }
-        else {
-            const { resource, id } = ret[ret.length - 1];
-            const fields = this.toPrismaSelect(query.fields[resource]);
-            const include = {};
-            if (!_.isEmpty(query.include)) {
-                query.include.split(',').forEach((inc) => {
-                    include[inc] = {
-                        select: this.toPrismaSelect(query.fields[inc]),
-                    };
-                });
-            }
-            // 情况1：搜索单个
-            if (id != null) {
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-ignore
-                return this.prisma[resource].findUnique({
-                    where: {
-                        id: id,
-                    },
-                    select: fields,
-                });
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            const ret = (0, flowda_shared_1.matchPath)(pathname);
+            if (ret.length === 0) {
+                return {};
             }
             else {
-                if (ret.length > 1) {
-                    // 情况1：根据前一个 resource id 搜索 list
-                    const pResource = ret[ret.length - 2];
-                    this.logger.log(`${resource}.findMany`);
-                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                    // @ts-ignore
-                    return this.prisma[resource].findMany({
-                        where: {
-                            [`${pResource.resource}Id`]: pResource.id,
-                            isDeleted: false,
-                        },
-                        select: Object.assign(Object.assign({}, fields), include),
+                const { resource, id } = ret[ret.length - 1];
+                const fields = this.toPrismaSelect(query.fields[resource]);
+                const include = {};
+                if (!_.isEmpty(query.include)) {
+                    query.include.split(',').forEach((inc) => {
+                        include[inc] = {
+                            select: this.toPrismaSelect(query.fields[inc]),
+                        };
                     });
                 }
-                else {
-                    this.logger.log(` ---- ${resource}.findMany`);
+                // 情况1：搜索单个
+                if (id != null) {
+                    const nid = yield this.parseId(resource, id);
                     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                     // @ts-ignore
-                    return this.prisma[resource].findMany({
+                    return this.prisma[resource].findUnique({
                         where: {
-                            // todo: tenantId
-                            isDeleted: false,
+                            id: nid,
                         },
                         select: fields,
                     });
                 }
+                else {
+                    if (ret.length > 1) {
+                        // 情况1：根据前一个 resource id 搜索 list
+                        const pResource = ret[ret.length - 2];
+                        this.logger.log(`${resource}.findMany`);
+                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                        // @ts-ignore
+                        return this.prisma[resource].findMany({
+                            where: {
+                                [`${pResource.resource}Id`]: pResource.id,
+                                isDeleted: false,
+                            },
+                            select: Object.assign(Object.assign({}, fields), include),
+                        });
+                    }
+                    else {
+                        this.logger.log(`${resource}.findMany`);
+                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                        // @ts-ignore
+                        return this.prisma[resource].findMany({
+                            where: {
+                                // todo: tenantId
+                                isDeleted: false,
+                            },
+                            select: fields,
+                        });
+                    }
+                }
             }
-        }
+        });
+    }
+    parseId(resource, id) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            const modelName = (0, flowda_shared_1.toModelName)(resource);
+            const dmmf = yield this.prisma._getDmmf();
+            const idField = dmmf.modelMap[modelName].fields.find((item) => item.name === 'id');
+            const nId = idField.type === 'Int' ? parseInt(id) : id;
+            this.logger.log('id field:' + idField.type);
+            return nId;
+        });
     }
     put(path, values) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            const ret = (0, flowda_shared_2.matchPath)(path);
+            const ret = (0, flowda_shared_1.matchPath)(path);
             const { resource, id } = ret[ret.length - 1];
+            const nid = yield this.parseId(resource, id);
+            values.id = nid;
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
             return this.prisma[resource].update({
-                where: { id },
+                where: { id: nid },
                 data: values,
             });
         });
     }
     post(path, values) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            const ret = (0, flowda_shared_2.matchPath)(path);
+            const ret = (0, flowda_shared_1.matchPath)(path);
             const { resource } = ret[ret.length - 1];
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
@@ -673,7 +738,7 @@ let DataService = DataService_1 = class DataService {
     }
     remove(path) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            const ret = (0, flowda_shared_2.matchPath)(path);
+            const ret = (0, flowda_shared_1.matchPath)(path);
             const { resource, id } = ret[ret.length - 1];
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
@@ -888,7 +953,7 @@ let SchemaTransformer = SchemaTransformer_1 = class SchemaTransformer {
                 return (0, zod_openapi_1.generateSchema)(this.prismaZod[_extends]);
             }
             else
-                return {};
+                return _.omit(this.jsonSchema, ['type', 'properties', 'required']);
         }
     }
     checkValid() {
@@ -1062,11 +1127,15 @@ exports.getServices = getServices;
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.matchPath = void 0;
+exports.matchPath = exports.toModelName = void 0;
 const tslib_1 = __webpack_require__("tslib");
 const plur = tslib_1.__importStar(__webpack_require__("pluralize"));
 const _ = tslib_1.__importStar(__webpack_require__("lodash"));
-const REG = /(([a-z_]+s)\/?([a-z0-9-]+)?)+/g;
+const REG = /(([a-z_]+s)\/?([a-z0-9-_]+)?)+/g;
+function toModelName(s) {
+    return _.startCase(_.camelCase(s)).replace(/ /g, '');
+}
+exports.toModelName = toModelName;
 function matchPath(path) {
     const ret1 = path.match(REG);
     if (ret1 != null) {
@@ -1075,7 +1144,7 @@ function matchPath(path) {
             const p = plur.singular(resource);
             return {
                 resource: _.camelCase(p),
-                resourceSchema: _.startCase(_.camelCase(p)).replace(/ /g, '') + 'ResourceSchema',
+                resourceSchema: toModelName(p) + 'ResourceSchema',
                 origin: resource,
                 id,
             };
@@ -1138,7 +1207,7 @@ exports.zt = tslib_1.__importStar(__webpack_require__("../../libs/prisma-wms/src
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PostWithRelationsSchema = exports.PostSchema = exports.UserProfileWithRelationsSchema = exports.UserProfileSchema = exports.UserWithRelationsSchema = exports.UserSchema = exports.MemberInfoSchema = exports.ResourceTaskDefKeyRelationSchema = exports.ResourceTaskIdRelationSchema = exports.UserStatusSchema = exports.UserScalarFieldEnumSchema = exports.UserProfileScalarFieldEnumSchema = exports.TransactionIsolationLevelSchema = exports.SortOrderSchema = exports.ResourceTaskIdRelationScalarFieldEnumSchema = exports.ResourceTaskDefKeyRelationScalarFieldEnumSchema = exports.PostScalarFieldEnumSchema = exports.MemberInfoScalarFieldEnumSchema = void 0;
+exports.PostWithRelationsSchema = exports.PostSchema = exports.UserProfileWithRelationsSchema = exports.UserProfileSchema = exports.UserWithRelationsSchema = exports.UserSchema = exports.MemberInfoSchema = exports.ResourceTaskDefKeyRelationSchema = exports.ResourceTaskIdRelationSchema = exports.UserGroupSchema = exports.UserStatusSchema = exports.UserScalarFieldEnumSchema = exports.UserProfileScalarFieldEnumSchema = exports.TransactionIsolationLevelSchema = exports.SortOrderSchema = exports.ResourceTaskIdRelationScalarFieldEnumSchema = exports.ResourceTaskDefKeyRelationScalarFieldEnumSchema = exports.PostScalarFieldEnumSchema = exports.MemberInfoScalarFieldEnumSchema = void 0;
 const zod_1 = __webpack_require__("zod");
 /////////////////////////////////////////
 // HELPER FUNCTIONS
@@ -1153,8 +1222,9 @@ exports.ResourceTaskIdRelationScalarFieldEnumSchema = zod_1.z.enum(['id', 'creat
 exports.SortOrderSchema = zod_1.z.enum(['asc', 'desc']);
 exports.TransactionIsolationLevelSchema = zod_1.z.enum(['ReadUncommitted', 'ReadCommitted', 'RepeatableRead', 'Serializable']);
 exports.UserProfileScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'userId', 'fullName']);
-exports.UserScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'username', 'hashedPassword', 'hashedRefreshToken', 'status']);
+exports.UserScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'username', 'hashedPassword', 'hashedRefreshToken', 'status', 'role']);
 exports.UserStatusSchema = zod_1.z.enum(['ACTIVE', 'FORBIDDEN']);
+exports.UserGroupSchema = zod_1.z.enum(['ADMIN', 'USER']);
 /////////////////////////////////////////
 // MODELS
 /////////////////////////////////////////
@@ -1196,6 +1266,7 @@ exports.MemberInfoSchema = zod_1.z.object({
 /////////////////////////////////////////
 exports.UserSchema = zod_1.z.object({
     status: exports.UserStatusSchema,
+    role: exports.UserGroupSchema,
     id: zod_1.z.number().int(),
     createdAt: zod_1.z.date(),
     updatedAt: zod_1.z.date(),
@@ -1326,7 +1397,7 @@ var UserError;
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ResourceTaskDefKeyRelationResourceSchema = exports.TaskResourceSchema = exports.MemberInfoResourceSchema = void 0;
+exports.ProcessDefinitionResourceSchema = exports.ResourceTaskDefKeyRelationResourceSchema = exports.TaskResourceSchema = exports.UserResourceSchema = exports.MemberInfoResourceSchema = void 0;
 const prisma_wms_1 = __webpack_require__("../../libs/prisma-wms/src/index.ts");
 const flowda_engine_1 = __webpack_require__("../../libs/flowda-engine/src/index.ts");
 const zod_1 = __webpack_require__("zod");
@@ -1336,6 +1407,16 @@ exports.MemberInfoResourceSchema = prisma_wms_1.MemberInfoSchema.omit({
     // motor-admin schema
     __meta: (0, flowda_engine_1.meta)({
         extends: 'MemberInfoSchema',
+    }),
+});
+exports.UserResourceSchema = prisma_wms_1.UserSchema.omit({
+    isDeleted: true,
+    hashedPassword: true,
+    hashedRefreshToken: true,
+}).extend({
+    // motor-admin schema
+    __meta: (0, flowda_engine_1.meta)({
+        extends: 'UserSchema',
     }),
 });
 exports.TaskResourceSchema = zod_1.z
@@ -1348,14 +1429,19 @@ exports.TaskResourceSchema = zod_1.z
     processDefinitionId: zod_1.z.string(),
     processInstanceId: zod_1.z.string(),
     taskDefinitionKey: zod_1.z.string(),
-    formLink: zod_1.z.string(),
+    variables: zod_1.z.string(),
 })
-    .openapi({ display_name: '任务列表' })
     .extend({
     // motor-admin schema
     __meta: (0, flowda_engine_1.meta)({
         prisma: false,
     }),
+})
+    .openapi({
+    primary_key: 'id',
+    display_name: '任务',
+    display_column: 'name',
+    display_primary_key: 'true',
 });
 exports.ResourceTaskDefKeyRelationResourceSchema = prisma_wms_1.ResourceTaskDefKeyRelationSchema.omit({
     isDeleted: true,
@@ -1364,6 +1450,30 @@ exports.ResourceTaskDefKeyRelationResourceSchema = prisma_wms_1.ResourceTaskDefK
     __meta: (0, flowda_engine_1.meta)({
         extends: 'ResourceTaskDefKeyRelationSchema',
     }),
+});
+exports.ProcessDefinitionResourceSchema = zod_1.z
+    .object({
+    id: zod_1.z.string(),
+    key: zod_1.z.string(),
+    name: zod_1.z.string(),
+    version: zod_1.z.number(),
+    resource: zod_1.z.string(),
+    deploymentId: zod_1.z.string().cuid(),
+    suspended: zod_1.z.boolean(),
+    historyTimeToLive: zod_1.z.number(),
+    startableInTasklist: zod_1.z.boolean(),
+})
+    .extend({
+    // motor-admin schema
+    __meta: (0, flowda_engine_1.meta)({
+        prisma: false,
+    }),
+})
+    .openapi({
+    primary_key: 'id',
+    display_name: '已部署流程图',
+    display_column: 'name',
+    display_primary_key: 'true',
 });
 
 
@@ -1441,6 +1551,7 @@ exports.PostService = PostService;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+var TaskService_1;
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TaskService = void 0;
@@ -1451,14 +1562,38 @@ const db = tslib_1.__importStar(__webpack_require__("@prisma/client-wms"));
 const axios_1 = tslib_1.__importDefault(__webpack_require__("axios"));
 const _ = tslib_1.__importStar(__webpack_require__("lodash"));
 const wms_env_1 = __webpack_require__("../../libs/wms-services/src/lib/wms-env.ts");
-let TaskService = class TaskService {
-    constructor(prisma) {
+let TaskService = TaskService_1 = class TaskService {
+    constructor(prisma, loggerFactory) {
         this.prisma = prisma;
+        this.logger = loggerFactory(TaskService_1.name);
     }
-    get(taskId) {
+    start(key, uid) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            const res = yield axios_1.default.post(wms_env_1.WMS_ENV.C7_REST_URL + `/process-definition/key/${key}/start`, {
+                'variables': {
+                    'uid': {
+                        'value': uid,
+                        'type': 'Integer',
+                    },
+                },
+                'businessKey': 'myBusinessKey',
+            });
+        });
+    }
+    getTask(taskId) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            const res = yield axios_1.default.get(wms_env_1.WMS_ENV.C7_REST_URL + `/task/${taskId}`);
+            const res2 = yield axios_1.default.get(wms_env_1.WMS_ENV.C7_REST_URL + `/task/${taskId}/form-variables`);
+            res.data.variables = JSON.stringify(res2.data);
+            return res.data;
+        });
+    }
+    getTaskForm(taskId) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
             const res = yield axios_1.default.get(wms_env_1.WMS_ENV.C7_REST_URL + `/task/${taskId}`);
             const taskDefinitionKey = res.data.taskDefinitionKey;
+            const res2 = yield axios_1.default.get(wms_env_1.WMS_ENV.C7_REST_URL + `/task/${taskId}/form-variables`);
+            this.logger.log(res2.data);
             const rel = yield this.prisma.resourceTaskDefKeyRelation.findUnique({
                 where: {
                     taskDefKey: taskDefinitionKey,
@@ -1491,7 +1626,7 @@ let TaskService = class TaskService {
                 });
             }
             catch (e) {
-                console.error(e);
+                this.logger.error(e);
             }
             return {
                 taskId,
@@ -1502,10 +1637,11 @@ let TaskService = class TaskService {
         });
     }
 };
-TaskService = tslib_1.__decorate([
+TaskService = TaskService_1 = tslib_1.__decorate([
     (0, inversify_1.injectable)(),
     tslib_1.__param(0, (0, inversify_1.inject)(flowda_shared_1.PrismaClientSymbol)),
-    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof db !== "undefined" && db.PrismaClient) === "function" ? _a : Object])
+    tslib_1.__param(1, (0, inversify_1.inject)('Factory<Logger>')),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof db !== "undefined" && db.PrismaClient) === "function" ? _a : Object, Function])
 ], TaskService);
 exports.TaskService = TaskService;
 
@@ -1612,6 +1748,7 @@ let UserService = UserService_1 = class UserService {
             });
             const at = this.generateJwt(payload, wms_env_1.WMS_ENV.ACCESS_TOKEN_SECRET, wms_env_1.WMS_ENV.ACCESS_TOKEN_EXPIRE);
             return {
+                username: user.username,
                 refresh_token: rt.token,
                 access_token: at.token,
             };
