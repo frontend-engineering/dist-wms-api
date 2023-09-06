@@ -1207,7 +1207,7 @@ exports.zt = tslib_1.__importStar(__webpack_require__("../../libs/prisma-wms/src
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PostWithRelationsSchema = exports.PostSchema = exports.UserProfileWithRelationsSchema = exports.UserProfileSchema = exports.UserWithRelationsSchema = exports.UserSchema = exports.MemberInfoSchema = exports.ResourceTaskDefKeyRelationSchema = exports.ResourceTaskIdRelationSchema = exports.UserGroupSchema = exports.UserStatusSchema = exports.UserScalarFieldEnumSchema = exports.UserProfileScalarFieldEnumSchema = exports.TransactionIsolationLevelSchema = exports.SortOrderSchema = exports.ResourceTaskIdRelationScalarFieldEnumSchema = exports.ResourceTaskDefKeyRelationScalarFieldEnumSchema = exports.PostScalarFieldEnumSchema = exports.MemberInfoScalarFieldEnumSchema = void 0;
+exports.PostWithRelationsSchema = exports.PostSchema = exports.UserProfileWithRelationsSchema = exports.UserProfileSchema = exports.UserWithRelationsSchema = exports.UserSchema = exports.MemberInfoSchema = exports.TaskFormRelationSchema = exports.UserGroupSchema = exports.UserStatusSchema = exports.UserScalarFieldEnumSchema = exports.UserProfileScalarFieldEnumSchema = exports.TransactionIsolationLevelSchema = exports.TaskFormRelationScalarFieldEnumSchema = exports.SortOrderSchema = exports.PostScalarFieldEnumSchema = exports.MemberInfoScalarFieldEnumSchema = void 0;
 const zod_1 = __webpack_require__("zod");
 /////////////////////////////////////////
 // HELPER FUNCTIONS
@@ -1217,9 +1217,8 @@ const zod_1 = __webpack_require__("zod");
 /////////////////////////////////////////
 exports.MemberInfoScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'gender']);
 exports.PostScalarFieldEnumSchema = zod_1.z.enum(['id', 'title', 'content', 'published', 'authorId']);
-exports.ResourceTaskDefKeyRelationScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'resource', 'taskDefKey']);
-exports.ResourceTaskIdRelationScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'taskId', 'processInstanceId']);
 exports.SortOrderSchema = zod_1.z.enum(['asc', 'desc']);
+exports.TaskFormRelationScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'taskDefinitionKey', 'formKey']);
 exports.TransactionIsolationLevelSchema = zod_1.z.enum(['ReadUncommitted', 'ReadCommitted', 'RepeatableRead', 'Serializable']);
 exports.UserProfileScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'userId', 'fullName']);
 exports.UserScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'username', 'hashedPassword', 'hashedRefreshToken', 'status', 'role']);
@@ -1229,27 +1228,16 @@ exports.UserGroupSchema = zod_1.z.enum(['ADMIN', 'USER']);
 // MODELS
 /////////////////////////////////////////
 /////////////////////////////////////////
-// RESOURCE TASK ID RELATION SCHEMA
+// TASK FORM RELATION SCHEMA
 /////////////////////////////////////////
-exports.ResourceTaskIdRelationSchema = zod_1.z.object({
+exports.TaskFormRelationSchema = zod_1.z.object({
     id: zod_1.z.number().int(),
     createdAt: zod_1.z.date(),
     updatedAt: zod_1.z.date(),
     isDeleted: zod_1.z.boolean(),
-    taskId: zod_1.z.string(),
-    processInstanceId: zod_1.z.string(),
-});
-/////////////////////////////////////////
-// RESOURCE TASK DEF KEY RELATION SCHEMA
-/////////////////////////////////////////
-exports.ResourceTaskDefKeyRelationSchema = zod_1.z.object({
-    id: zod_1.z.number().int(),
-    createdAt: zod_1.z.date(),
-    updatedAt: zod_1.z.date(),
-    isDeleted: zod_1.z.boolean(),
-    resource: zod_1.z.string(),
-    taskDefKey: zod_1.z.string(),
-});
+    taskDefinitionKey: zod_1.z.string(),
+    formKey: zod_1.z.string(),
+}).openapi({ "display_name": "节点和表单关联关系" });
 /////////////////////////////////////////
 // MEMBER INFO SCHEMA
 /////////////////////////////////////////
@@ -1397,14 +1385,13 @@ var UserError;
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ProcessDefinitionResourceSchema = exports.ResourceTaskDefKeyRelationResourceSchema = exports.TaskResourceSchema = exports.UserResourceSchema = exports.MemberInfoResourceSchema = void 0;
+exports.ManagerApproveSchema = exports.AddToAdminResourceSchema = exports.ProcessDefinitionResourceSchema = exports.TaskResourceSchema = exports.TaskFormRelationResourceSchema = exports.UserResourceSchema = exports.MemberInfoResourceSchema = void 0;
 const prisma_wms_1 = __webpack_require__("../../libs/prisma-wms/src/index.ts");
 const flowda_engine_1 = __webpack_require__("../../libs/flowda-engine/src/index.ts");
 const zod_1 = __webpack_require__("zod");
 exports.MemberInfoResourceSchema = prisma_wms_1.MemberInfoSchema.omit({
     isDeleted: true,
 }).extend({
-    // motor-admin schema
     __meta: (0, flowda_engine_1.meta)({
         extends: 'MemberInfoSchema',
     }),
@@ -1414,11 +1401,18 @@ exports.UserResourceSchema = prisma_wms_1.UserSchema.omit({
     hashedPassword: true,
     hashedRefreshToken: true,
 }).extend({
-    // motor-admin schema
     __meta: (0, flowda_engine_1.meta)({
         extends: 'UserSchema',
     }),
 });
+exports.TaskFormRelationResourceSchema = prisma_wms_1.TaskFormRelationSchema.omit({
+    isDeleted: true,
+}).extend({
+    __meta: (0, flowda_engine_1.meta)({
+        extends: 'TaskFormRelationSchema',
+    }),
+});
+// prisma:false camunda API
 exports.TaskResourceSchema = zod_1.z
     .object({
     id: zod_1.z.string().cuid(),
@@ -1432,7 +1426,6 @@ exports.TaskResourceSchema = zod_1.z
     variables: zod_1.z.string(),
 })
     .extend({
-    // motor-admin schema
     __meta: (0, flowda_engine_1.meta)({
         prisma: false,
     }),
@@ -1442,14 +1435,6 @@ exports.TaskResourceSchema = zod_1.z
     display_name: '任务',
     display_column: 'name',
     display_primary_key: 'true',
-});
-exports.ResourceTaskDefKeyRelationResourceSchema = prisma_wms_1.ResourceTaskDefKeyRelationSchema.omit({
-    isDeleted: true,
-}).extend({
-    // motor-admin schema
-    __meta: (0, flowda_engine_1.meta)({
-        extends: 'ResourceTaskDefKeyRelationSchema',
-    }),
 });
 exports.ProcessDefinitionResourceSchema = zod_1.z
     .object({
@@ -1464,7 +1449,6 @@ exports.ProcessDefinitionResourceSchema = zod_1.z
     startableInTasklist: zod_1.z.boolean(),
 })
     .extend({
-    // motor-admin schema
     __meta: (0, flowda_engine_1.meta)({
         prisma: false,
     }),
@@ -1475,6 +1459,34 @@ exports.ProcessDefinitionResourceSchema = zod_1.z
     display_column: 'name',
     display_primary_key: 'true',
 });
+// custom form
+exports.AddToAdminResourceSchema = prisma_wms_1.UserSchema.omit({
+    isDeleted: true,
+    hashedPassword: true,
+    hashedRefreshToken: true,
+    status: true,
+    createdAt: true,
+    updatedAt: true,
+    username: true,
+}).extend({
+    uid: zod_1.z.number().openapi({ title: '申请人 ID', access_type: 'read_only' }),
+    username: zod_1.z.string().openapi({ title: '申请人用户名', access_type: 'read_only' }),
+    __meta: (0, flowda_engine_1.meta)({
+        extends: 'UserSchema',
+    }),
+}).openapi({
+    primary_key: 'id',
+    display_name: '申请管理员表单',
+    display_column: 'username',
+    display_primary_key: 'true',
+});
+// 表单
+exports.ManagerApproveSchema = zod_1.z.object({
+    comment: zod_1.z.number().openapi({ title: '意见' }),
+    __meta: (0, flowda_engine_1.meta)({
+        prisma: false,
+    }),
+}).openapi({});
 
 
 /***/ }),
@@ -1588,22 +1600,30 @@ let TaskService = TaskService_1 = class TaskService {
             return res.data;
         });
     }
+    /**
+     * @param taskId
+     *
+     * 1. 根据 taskId -> formKey
+     * 2. 前端根据 formKey -> form schema 并初始化对应的 view model
+     * 3. 前端写一点点代码，扩展 form schema 的 onInit 和 onComplete
+     */
     getTaskForm(taskId) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
             const res = yield axios_1.default.get(wms_env_1.WMS_ENV.C7_REST_URL + `/task/${taskId}`);
             const taskDefinitionKey = res.data.taskDefinitionKey;
             const res2 = yield axios_1.default.get(wms_env_1.WMS_ENV.C7_REST_URL + `/task/${taskId}/form-variables`);
             this.logger.log(res2.data);
-            const rel = yield this.prisma.resourceTaskDefKeyRelation.findUnique({
+            const ret = yield this.prisma.taskFormRelation.findUnique({
                 where: {
-                    taskDefKey: taskDefinitionKey,
+                    taskDefinitionKey,
                 },
             });
-            if (rel) {
+            if (ret) {
                 return {
                     taskId: taskId,
-                    taskDefKey: taskDefinitionKey,
-                    resource: rel.resource,
+                    taskDefinitionKey: taskDefinitionKey,
+                    formKey: ret.formKey,
+                    variables: res2.data,
                 };
             }
             return undefined;
