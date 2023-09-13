@@ -70,7 +70,6 @@ const flowda_shared_node_1 = __webpack_require__("../../libs/flowda-shared-node/
 const task_controller_1 = __webpack_require__("./src/app/task.controller.ts");
 const user_controller_1 = __webpack_require__("./src/user/user.controller.ts");
 const userLocal_strategy_1 = __webpack_require__("./src/user/userLocal.strategy.ts");
-const appExceptionFilter_1 = __webpack_require__("./src/app/appExceptionFilter.ts");
 const userJwt_strategy_1 = __webpack_require__("./src/user/userJwt.strategy.ts");
 const process_controller_1 = __webpack_require__("./src/app/process.controller.ts");
 let AppModule = class AppModule {
@@ -82,7 +81,7 @@ AppModule = tslib_1.__decorate([
         providers: [
             {
                 provide: core_1.APP_FILTER,
-                useClass: appExceptionFilter_1.AppExceptionFilter,
+                useClass: flowda_shared_node_1.AppExceptionFilter,
             },
             userLocal_strategy_1.UserLocalStrategy,
             userJwt_strategy_1.UserJwtStrategy,
@@ -90,77 +89,6 @@ AppModule = tslib_1.__decorate([
     })
 ], AppModule);
 exports.AppModule = AppModule;
-
-
-/***/ }),
-
-/***/ "./src/app/appExceptionFilter.ts":
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-var AppExceptionFilter_1;
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.AppExceptionFilter = void 0;
-const tslib_1 = __webpack_require__("tslib");
-const common_1 = __webpack_require__("@nestjs/common");
-const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
-const nestjs_zod_1 = __webpack_require__("nestjs-zod");
-let AppExceptionFilter = AppExceptionFilter_1 = class AppExceptionFilter {
-    constructor() {
-        this.logger = new common_1.Logger(AppExceptionFilter_1.name);
-    }
-    catch(exception, host) {
-        const ctx = host.switchToHttp();
-        const response = ctx.getResponse();
-        let code;
-        let message;
-        let status;
-        let stack;
-        // 如果是 CustomError 提取 errorCode + message, 200
-        if (exception instanceof flowda_shared_1.CustomError) {
-            const rt = JSON.parse(exception.message);
-            code = rt.errorCode;
-            message = rt.message;
-            status = common_1.HttpStatus.OK;
-        }
-        else if (exception instanceof Error) {
-            // 如果是一般 Error，提取 message，errorCode 继续 undef
-            message = exception.message;
-            status = common_1.HttpStatus.INTERNAL_SERVER_ERROR;
-            stack = exception.stack;
-        }
-        // 如果是 HttpException，则重新赋值下 status
-        if (exception instanceof common_1.HttpException) {
-            status = exception.getStatus();
-            code = status;
-            const res = exception.getResponse();
-            if (typeof res === 'object' && Array.isArray(res.message)) {
-                message = res.message.join(',');
-            }
-        }
-        if (exception instanceof common_1.UnauthorizedException) {
-            code = exception.getStatus();
-            message = exception.message;
-        }
-        if (exception instanceof nestjs_zod_1.ZodValidationException) {
-            code = exception.getStatus();
-            message = exception.message;
-        }
-        this.logger.error({
-            code: code,
-            message: message,
-            stack: stack,
-        });
-        response.status(status).json({
-            code: code,
-            message: message,
-        });
-    }
-};
-AppExceptionFilter = AppExceptionFilter_1 = tslib_1.__decorate([
-    (0, common_1.Catch)()
-], AppExceptionFilter);
-exports.AppExceptionFilter = AppExceptionFilter;
 
 
 /***/ }),
@@ -457,14 +385,8 @@ let UserLocalStrategy = UserLocalStrategy_1 = class UserLocalStrategy extends (0
     validate(username, password) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
             // eslint-disable-next-line no-useless-catch
-            try {
-                const tokens = yield this.user.validate(username, password);
-                this.logger.log('valiate pass:' + username);
-                return tokens;
-            }
-            catch (e) {
-                return false;
-            }
+            const tokens = yield this.user.validate(username, password);
+            return tokens;
         });
     }
 };
@@ -572,6 +494,61 @@ exports.DataController = DataController;
 
 /***/ }),
 
+/***/ "../../libs/flowda-shared-node/src/filters/appExceptionFilter.ts":
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+var AppExceptionFilter_1;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AppExceptionFilter = void 0;
+const tslib_1 = __webpack_require__("tslib");
+const common_1 = __webpack_require__("@nestjs/common");
+const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
+let AppExceptionFilter = AppExceptionFilter_1 = class AppExceptionFilter {
+    constructor() {
+        this.logger = new common_1.Logger(AppExceptionFilter_1.name);
+    }
+    catch(exception, host) {
+        const ctx = host.switchToHttp();
+        const response = ctx.getResponse();
+        if (exception instanceof flowda_shared_1.CustomError) {
+            const rt = JSON.parse(exception.message);
+            this.logger.error(`CustomError|${rt.code}|${rt.message}`);
+            response.status(common_1.HttpStatus.OK).json({
+                code: rt.code,
+                message: rt.message,
+            });
+        }
+        else if (exception instanceof common_1.HttpException) {
+            let extra = '-';
+            const res = exception.getResponse();
+            if (typeof res === 'object') {
+                extra = JSON.stringify(res);
+            }
+            this.logger.error(`HttpException|${exception.getStatus()}|${exception.message}|${extra}`);
+            response.status(exception.getStatus()).json({
+                code: exception.getStatus(),
+                message: typeof res === 'object' ? res : exception.message,
+            });
+        }
+        else {
+            this.logger.error(`Error|${common_1.HttpStatus.INTERNAL_SERVER_ERROR}|${exception.message}`);
+            this.logger.error(exception.stack);
+            response.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({
+                code: common_1.HttpStatus.INTERNAL_SERVER_ERROR,
+                message: exception.message,
+            });
+        }
+    }
+};
+AppExceptionFilter = AppExceptionFilter_1 = tslib_1.__decorate([
+    (0, common_1.Catch)()
+], AppExceptionFilter);
+exports.AppExceptionFilter = AppExceptionFilter;
+
+
+/***/ }),
+
 /***/ "../../libs/flowda-shared-node/src/flowdaSharedNode.module.ts":
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -599,6 +576,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const tslib_1 = __webpack_require__("tslib");
 tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared-node/src/flowdaSharedNode.module.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared-node/src/controllers/data.controller.ts"), exports);
+tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared-node/src/filters/appExceptionFilter.ts"), exports);
 
 
 /***/ }),
@@ -677,9 +655,9 @@ exports.APISymbol = Symbol('API');
 exports.PrismaZodSchemaSymbol = Symbol.for('PrismaZodSchema');
 exports.CustomZodSchemaSymbol = Symbol.for('CustomZodSchema');
 class CustomError extends Error {
-    constructor(errorCode, message, extraInfo) {
-        super(JSON.stringify({ errorCode, message }));
-        this.message = JSON.stringify({ errorCode, message, extra: extraInfo });
+    constructor(code, message, extra) {
+        super(JSON.stringify({ code: code, message }));
+        this.message = JSON.stringify({ code, message, extra });
     }
 }
 exports.CustomError = CustomError;
@@ -1410,18 +1388,6 @@ var UserError;
         }
     }
     UserError.UserExist = UserExist;
-    class UserNotExist extends flowda_shared_1.CustomError {
-        constructor() {
-            super(1002, 'User not exist');
-        }
-    }
-    UserError.UserNotExist = UserNotExist;
-    class UserNamePasswordMismatch extends flowda_shared_1.CustomError {
-        constructor() {
-            super(1002, 'Username and password mismatch');
-        }
-    }
-    UserError.UserNamePasswordMismatch = UserNamePasswordMismatch;
 })(UserError = exports.UserError || (exports.UserError = {}));
 
 
@@ -1738,6 +1704,7 @@ const bcrypt = tslib_1.__importStar(__webpack_require__("bcrypt"));
 const jwt = tslib_1.__importStar(__webpack_require__("jsonwebtoken"));
 const wms_env_1 = __webpack_require__("../../libs/wms-services/src/lib/wms-env.ts");
 const axios_1 = tslib_1.__importDefault(__webpack_require__("axios"));
+const common_1 = __webpack_require__("@nestjs/common");
 exports.registerSchema = zod_1.z.object({
     username: zod_1.z.string(),
     password: zod_1.z.string(),
@@ -1802,13 +1769,11 @@ let UserService = UserService_1 = class UserService {
                 },
             });
             if (!user) {
-                this.logger.warn('User not exist:' + username);
-                throw new error_code_1.UserError.UserNotExist();
+                throw new common_1.UnauthorizedException({ reason: 'User not exist', username });
             }
             const match = yield bcrypt.compare(password, user.hashedPassword);
             if (!match) {
-                this.logger.warn('Username and password mismatch:' + username);
-                throw new error_code_1.UserError.UserNamePasswordMismatch();
+                throw new common_1.UnauthorizedException({ reason: 'User not exist', username });
             }
             const payload = { uid: user.id };
             const rt = this.generateJwt(payload, wms_env_1.WMS_ENV.REFRESH_TOKEN_SECRET, wms_env_1.WMS_ENV.REFRESH_TOKEN_EXPIRE);
@@ -1818,6 +1783,7 @@ let UserService = UserService_1 = class UserService {
                 data: user,
             });
             const at = this.generateJwt(payload, wms_env_1.WMS_ENV.ACCESS_TOKEN_SECRET, wms_env_1.WMS_ENV.ACCESS_TOKEN_EXPIRE);
+            this.logger.log('validate pass:' + username);
             return {
                 username: user.username,
                 refresh_token: rt.token,
