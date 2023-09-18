@@ -72,12 +72,13 @@ const user_controller_1 = __webpack_require__("./src/user/user.controller.ts");
 const userLocal_strategy_1 = __webpack_require__("./src/user/userLocal.strategy.ts");
 const userJwt_strategy_1 = __webpack_require__("./src/user/userJwt.strategy.ts");
 const process_controller_1 = __webpack_require__("./src/app/process.controller.ts");
+const data_controller_1 = __webpack_require__("./src/app/data.controller.ts");
 let AppModule = class AppModule {
 };
 AppModule = tslib_1.__decorate([
     (0, common_1.Module)({
         imports: [services_module_1.ServicesModule],
-        controllers: [app_controller_1.AppController, flowda_shared_node_1.DataController, task_controller_1.TaskController, user_controller_1.UserController, process_controller_1.ProcessController],
+        controllers: [app_controller_1.AppController, data_controller_1.DataController, task_controller_1.TaskController, user_controller_1.UserController, process_controller_1.ProcessController],
         providers: [
             {
                 provide: core_1.APP_FILTER,
@@ -89,6 +90,84 @@ AppModule = tslib_1.__decorate([
     })
 ], AppModule);
 exports.AppModule = AppModule;
+
+
+/***/ }),
+
+/***/ "./src/app/data.controller.ts":
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+var _a, _b, _c, _d, _e;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DataController = void 0;
+const tslib_1 = __webpack_require__("tslib");
+const common_1 = __webpack_require__("@nestjs/common");
+const express = tslib_1.__importStar(__webpack_require__("express"));
+const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
+const userJwtAuth_guard_1 = __webpack_require__("./src/user/userJwtAuth.guard.ts");
+let DataController = class DataController {
+    constructor(service) {
+        this.service = service;
+    }
+    get(req) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            return this.service.get(req.params[0], req.query);
+        });
+    }
+    put(req, values) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            return this.service.put(req.params[0], values);
+        });
+    }
+    post(req, values) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            return this.service.post(req.params[0], values);
+        });
+    }
+    remove(req) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            return this.service.remove(req.params[0]);
+        });
+    }
+};
+tslib_1.__decorate([
+    (0, common_1.Get)(''),
+    tslib_1.__param(0, (0, common_1.Req)()),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", [typeof (_b = typeof express !== "undefined" && express.Request) === "function" ? _b : Object]),
+    tslib_1.__metadata("design:returntype", Promise)
+], DataController.prototype, "get", null);
+tslib_1.__decorate([
+    (0, common_1.Put)(''),
+    tslib_1.__param(0, (0, common_1.Req)()),
+    tslib_1.__param(1, (0, common_1.Body)()),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", [typeof (_c = typeof express !== "undefined" && express.Request) === "function" ? _c : Object, Object]),
+    tslib_1.__metadata("design:returntype", Promise)
+], DataController.prototype, "put", null);
+tslib_1.__decorate([
+    (0, common_1.Post)(''),
+    tslib_1.__param(0, (0, common_1.Req)()),
+    tslib_1.__param(1, (0, common_1.Body)()),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", [typeof (_d = typeof express !== "undefined" && express.Request) === "function" ? _d : Object, Object]),
+    tslib_1.__metadata("design:returntype", Promise)
+], DataController.prototype, "post", null);
+tslib_1.__decorate([
+    (0, common_1.Delete)(''),
+    (0, common_1.HttpCode)(200),
+    tslib_1.__param(0, (0, common_1.Req)()),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", [typeof (_e = typeof express !== "undefined" && express.Request) === "function" ? _e : Object]),
+    tslib_1.__metadata("design:returntype", Promise)
+], DataController.prototype, "remove", null);
+DataController = tslib_1.__decorate([
+    (0, common_1.Controller)('data/*'),
+    (0, common_1.UseGuards)(userJwtAuth_guard_1.UserJwtAuthGuard),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof flowda_shared_1.DataService !== "undefined" && flowda_shared_1.DataService) === "function" ? _a : Object])
+], DataController);
+exports.DataController = DataController;
 
 
 /***/ }),
@@ -311,6 +390,7 @@ exports.UserController = UserController;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+var UserJwtStrategy_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserJwtStrategy = void 0;
 const tslib_1 = __webpack_require__("tslib");
@@ -318,21 +398,23 @@ const passport_1 = __webpack_require__("@nestjs/passport");
 const passport_jwt_1 = __webpack_require__("passport-jwt");
 const common_1 = __webpack_require__("@nestjs/common");
 const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
-let UserJwtStrategy = class UserJwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy, 'userJwt') {
+let UserJwtStrategy = UserJwtStrategy_1 = class UserJwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy, 'userJwt') {
     constructor() {
         super({
             jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
             secretOrKey: wms_services_1.WMS_ENV.ACCESS_TOKEN_SECRET,
         });
+        this.logger = new common_1.Logger(UserJwtStrategy_1.name);
     }
     validate(payload) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            this.logger.log(`expires at ${new Date(payload.exp0)}`);
             return payload;
         });
     }
 };
-UserJwtStrategy = tslib_1.__decorate([
+UserJwtStrategy = UserJwtStrategy_1 = tslib_1.__decorate([
     (0, common_1.Injectable)(),
     tslib_1.__metadata("design:paramtypes", [])
 ], UserJwtStrategy);
@@ -418,82 +500,6 @@ exports.UserLocalAuthGuard = UserLocalAuthGuard;
 
 /***/ }),
 
-/***/ "../../libs/flowda-shared-node/src/controllers/data.controller.ts":
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-var _a, _b, _c, _d, _e;
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DataController = void 0;
-const tslib_1 = __webpack_require__("tslib");
-const common_1 = __webpack_require__("@nestjs/common");
-const express = tslib_1.__importStar(__webpack_require__("express"));
-const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
-let DataController = class DataController {
-    constructor(service) {
-        this.service = service;
-    }
-    get(req) {
-        return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            return this.service.get(req.params[0], req.query);
-        });
-    }
-    put(req, values) {
-        return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            return this.service.put(req.params[0], values);
-        });
-    }
-    post(req, values) {
-        return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            return this.service.post(req.params[0], values);
-        });
-    }
-    remove(req) {
-        return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            return this.service.remove(req.params[0]);
-        });
-    }
-};
-tslib_1.__decorate([
-    (0, common_1.Get)(''),
-    tslib_1.__param(0, (0, common_1.Req)()),
-    tslib_1.__metadata("design:type", Function),
-    tslib_1.__metadata("design:paramtypes", [typeof (_b = typeof express !== "undefined" && express.Request) === "function" ? _b : Object]),
-    tslib_1.__metadata("design:returntype", Promise)
-], DataController.prototype, "get", null);
-tslib_1.__decorate([
-    (0, common_1.Put)(''),
-    tslib_1.__param(0, (0, common_1.Req)()),
-    tslib_1.__param(1, (0, common_1.Body)()),
-    tslib_1.__metadata("design:type", Function),
-    tslib_1.__metadata("design:paramtypes", [typeof (_c = typeof express !== "undefined" && express.Request) === "function" ? _c : Object, Object]),
-    tslib_1.__metadata("design:returntype", Promise)
-], DataController.prototype, "put", null);
-tslib_1.__decorate([
-    (0, common_1.Post)(''),
-    tslib_1.__param(0, (0, common_1.Req)()),
-    tslib_1.__param(1, (0, common_1.Body)()),
-    tslib_1.__metadata("design:type", Function),
-    tslib_1.__metadata("design:paramtypes", [typeof (_d = typeof express !== "undefined" && express.Request) === "function" ? _d : Object, Object]),
-    tslib_1.__metadata("design:returntype", Promise)
-], DataController.prototype, "post", null);
-tslib_1.__decorate([
-    (0, common_1.Delete)(''),
-    (0, common_1.HttpCode)(200),
-    tslib_1.__param(0, (0, common_1.Req)()),
-    tslib_1.__metadata("design:type", Function),
-    tslib_1.__metadata("design:paramtypes", [typeof (_e = typeof express !== "undefined" && express.Request) === "function" ? _e : Object]),
-    tslib_1.__metadata("design:returntype", Promise)
-], DataController.prototype, "remove", null);
-DataController = tslib_1.__decorate([
-    (0, common_1.Controller)('data/*'),
-    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof flowda_shared_1.DataService !== "undefined" && flowda_shared_1.DataService) === "function" ? _a : Object])
-], DataController);
-exports.DataController = DataController;
-
-
-/***/ }),
-
 /***/ "../../libs/flowda-shared-node/src/filters/appExceptionFilter.ts":
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -520,19 +526,20 @@ let AppExceptionFilter = AppExceptionFilter_1 = class AppExceptionFilter {
             });
         }
         else if (exception instanceof common_1.HttpException) {
-            let extra = '-';
             const res = exception.getResponse();
             if (typeof res === 'object') {
-                extra = JSON.stringify(res);
+                const extra = JSON.stringify(res);
+                this.logger.error(`HttpException|${exception.getStatus()}|${exception.message}|${extra}`);
             }
-            this.logger.error(`HttpException|${exception.getStatus()}|${exception.message}|${extra}`);
+            else {
+                this.logger.error(`HttpException|${exception.getStatus()}|${exception.message}`);
+            }
             response.status(exception.getStatus()).json({
                 code: exception.getStatus(),
                 message: typeof res === 'object' ? res : exception.message,
             });
         }
         else {
-            this.logger.error(`Error|${common_1.HttpStatus.INTERNAL_SERVER_ERROR}|${exception.message}`);
             this.logger.error(exception.stack);
             response.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({
                 code: common_1.HttpStatus.INTERNAL_SERVER_ERROR,
@@ -575,7 +582,6 @@ exports.flowdaSharedNodeModule = new inversify_1.ContainerModule((bind) => {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const tslib_1 = __webpack_require__("tslib");
 tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared-node/src/flowdaSharedNode.module.ts"), exports);
-tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared-node/src/controllers/data.controller.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared-node/src/filters/appExceptionFilter.ts"), exports);
 
 
@@ -620,6 +626,7 @@ tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared/src/flowdaSha
 tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared/src/utils/bindService.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared/src/utils/matchPath.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared/src/utils/getServices.ts"), exports);
+tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared/src/utils/browser-log-utils.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared/src/interfaces/types.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared/src/interfaces/schema.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared/src/services/schema/meta.ts"), exports);
@@ -711,7 +718,7 @@ let DataService = DataService_1 = class DataService {
             const dmmf = yield this.prisma._getDmmf();
             const idField = dmmf.modelMap[modelName].fields.find((item) => item.name === 'id');
             const nid = idField.type === 'Int' ? parseInt(id) : id;
-            this.logger.log('id field:' + idField.type + ' parsed: ' + nid);
+            this.logger.log(`id: ${id}, type: ${idField.type}`);
             return nid;
         });
     }
@@ -744,11 +751,18 @@ let DataService = DataService_1 = class DataService {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
             const ret = (0, matchPath_1.matchPath)(path);
             const { resource, id } = ret[ret.length - 1];
+            let nid;
+            if (id == null) {
+                throw new Error(`remove ${resource}, id null`);
+            }
+            else {
+                nid = yield this.parseId(resource, id);
+            }
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
             return this.prisma[resource].update({
                 where: {
-                    id,
+                    id: nid,
                 },
                 data: {
                     isDeleted: true,
@@ -823,6 +837,7 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
         if (typeof query.include === 'string' && query.include !== '') {
             query.include.split(',').forEach((inc) => {
                 include[inc] = {
+                    orderBy: [{ createdAt: 'desc' }],
                     select: this.toPrismaSelect(queryFields[inc]),
                 };
             });
@@ -847,6 +862,7 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
                         [`${pResource.resource}Id`]: pResource.id,
                         isDeleted: false,
                     },
+                    orderBy: [{ createdAt: 'desc' }],
                     select: Object.assign(Object.assign({}, fields), include),
                 };
             }
@@ -856,6 +872,7 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
                         // todo: tenantId
                         isDeleted: false,
                     },
+                    orderBy: [{ createdAt: 'desc' }],
                     select: fields,
                 };
             }
@@ -1153,6 +1170,42 @@ exports.bindService = bindService;
 
 /***/ }),
 
+/***/ "../../libs/flowda-shared/src/utils/browser-log-utils.ts":
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.error = exports.warn = exports.info = void 0;
+const levelColorMap = {
+    0: '#c0392b',
+    1: '#f39c12',
+    3: '#00BCD4', // Cyan
+};
+function style(level) {
+    return `
+  background: ${levelColorMap[level]};
+  border-radius: 0.5em;
+  color: white;
+  font-weight: bold;
+  padding: 2px 0.5em;
+`;
+}
+function info(msg) {
+    return [`%c info `, style(3), '', msg];
+}
+exports.info = info;
+function warn(msg) {
+    return [`%c warn `, style(1), '', msg];
+}
+exports.warn = warn;
+function error(msg) {
+    return [`%c error `, style(0), '', msg];
+}
+exports.error = error;
+
+
+/***/ }),
+
 /***/ "../../libs/flowda-shared/src/utils/getServices.ts":
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -1285,9 +1338,9 @@ exports.UserSchema = zod_1.z.object({
     updatedAt: zod_1.z.date(),
     isDeleted: zod_1.z.boolean().nullable(),
     username: zod_1.z.string(),
-    hashedPassword: zod_1.z.string(),
+    hashedPassword: zod_1.z.string().nullable(),
     hashedRefreshToken: zod_1.z.string().nullable(),
-});
+}).openapi({ "display_name": "员工" });
 exports.UserWithRelationsSchema = exports.UserSchema.merge(zod_1.z.object({
     profile: zod_1.z.lazy(() => exports.UserProfileWithRelationsSchema).nullable(),
     Post: zod_1.z.lazy(() => exports.PostWithRelationsSchema).array(),
@@ -1769,11 +1822,14 @@ let UserService = UserService_1 = class UserService {
                 },
             });
             if (!user) {
-                throw new common_1.UnauthorizedException({ reason: 'User not exist', username });
+                throw new common_1.UnauthorizedException({ reason: 'User does not exist', username });
+            }
+            if (!user.hashedPassword) {
+                throw new common_1.UnauthorizedException({ reason: 'Password is not initialized', username });
             }
             const match = yield bcrypt.compare(password, user.hashedPassword);
             if (!match) {
-                throw new common_1.UnauthorizedException({ reason: 'User not exist', username });
+                throw new common_1.UnauthorizedException({ reason: 'Username and password is not matched', username });
             }
             const payload = { uid: user.id };
             const rt = this.generateJwt(payload, wms_env_1.WMS_ENV.REFRESH_TOKEN_SECRET, wms_env_1.WMS_ENV.REFRESH_TOKEN_EXPIRE);
@@ -1792,7 +1848,8 @@ let UserService = UserService_1 = class UserService {
         });
     }
     generateJwt(payload, secret, expires) {
-        const token = jwt.sign(payload, secret, {
+        const exp0 = Date.now() + expires * 1000;
+        const token = jwt.sign(Object.assign(Object.assign({}, payload), { exp0 }), secret, {
             expiresIn: `${expires}s`,
         });
         const decode = jwt.decode(token);
