@@ -1513,7 +1513,7 @@ var UserError;
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ManagerApproveSchema = exports.AddToAdminResourceSchema = exports.ProcessDefinitionResourceSchema = exports.TaskResourceSchema = exports.TaskFormRelationResourceSchema = exports.UserResourceSchema = exports.MemberInfoResourceSchema = void 0;
+exports.ManagerApproveSchema = exports.AddToAdminResourceSchema = exports.WorkflowUserResourceSchema = exports.ProcessDefinitionResourceSchema = exports.TaskResourceSchema = exports.TaskFormRelationResourceSchema = exports.UserResourceSchema = exports.MemberInfoResourceSchema = void 0;
 const prisma_wms_1 = __webpack_require__("../../libs/prisma-wms/src/index.ts");
 const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
 const zod_1 = __webpack_require__("zod");
@@ -1586,6 +1586,23 @@ exports.ProcessDefinitionResourceSchema = zod_1.z
     display_name: '已部署流程图',
     display_column: 'name',
     display_primary_key: 'true',
+});
+exports.WorkflowUserResourceSchema = zod_1.z
+    .object({
+    id: zod_1.z.string(),
+    firstName: zod_1.z.string(),
+    lastName: zod_1.z.string(),
+    email: zod_1.z.string(),
+})
+    .extend({
+    __meta: (0, flowda_shared_1.meta)({
+        prisma: false,
+    }),
+})
+    .openapi({
+    primary_key: 'id',
+    display_name: '用户',
+    display_column: 'id',
 });
 // custom form
 exports.AddToAdminResourceSchema = prisma_wms_1.UserSchema.omit({
