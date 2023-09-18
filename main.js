@@ -391,6 +391,7 @@ exports.UserController = UserController;
 
 
 var UserJwtStrategy_1;
+var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserJwtStrategy = void 0;
 const tslib_1 = __webpack_require__("tslib");
@@ -398,25 +399,29 @@ const passport_1 = __webpack_require__("@nestjs/passport");
 const passport_jwt_1 = __webpack_require__("passport-jwt");
 const common_1 = __webpack_require__("@nestjs/common");
 const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
+const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
 let UserJwtStrategy = UserJwtStrategy_1 = class UserJwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy, 'userJwt') {
-    constructor() {
+    constructor(auth) {
         super({
             jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
             secretOrKey: wms_services_1.WMS_ENV.ACCESS_TOKEN_SECRET,
         });
+        this.auth = auth;
         this.logger = new common_1.Logger(UserJwtStrategy_1.name);
     }
     validate(payload) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
             this.logger.log(`expires at ${new Date(payload.exp0)}`);
+            this.auth.uid = payload.uid;
             return payload;
         });
     }
 };
 UserJwtStrategy = UserJwtStrategy_1 = tslib_1.__decorate([
     (0, common_1.Injectable)(),
-    tslib_1.__metadata("design:paramtypes", [])
+    tslib_1.__param(0, (0, common_1.Inject)(flowda_shared_1.AuthService)),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof flowda_shared_1.AuthService !== "undefined" && flowda_shared_1.AuthService) === "function" ? _a : Object])
 ], UserJwtStrategy);
 exports.UserJwtStrategy = UserJwtStrategy;
 
@@ -505,13 +510,15 @@ exports.UserLocalAuthGuard = UserLocalAuthGuard;
 
 
 var AppExceptionFilter_1;
+var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppExceptionFilter = void 0;
 const tslib_1 = __webpack_require__("tslib");
 const common_1 = __webpack_require__("@nestjs/common");
 const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
 let AppExceptionFilter = AppExceptionFilter_1 = class AppExceptionFilter {
-    constructor() {
+    constructor(auth) {
+        this.auth = auth;
         this.logger = new common_1.Logger(AppExceptionFilter_1.name);
     }
     catch(exception, host) {
@@ -534,6 +541,9 @@ let AppExceptionFilter = AppExceptionFilter_1 = class AppExceptionFilter {
             else {
                 this.logger.error(`HttpException|${exception.getStatus()}|${exception.message}`);
             }
+            if (exception.getStatus() === 401) {
+                this.auth.uid = null;
+            }
             response.status(exception.getStatus()).json({
                 code: exception.getStatus(),
                 message: typeof res === 'object' ? res : exception.message,
@@ -549,7 +559,9 @@ let AppExceptionFilter = AppExceptionFilter_1 = class AppExceptionFilter {
     }
 };
 AppExceptionFilter = AppExceptionFilter_1 = tslib_1.__decorate([
-    (0, common_1.Catch)()
+    (0, common_1.Catch)(),
+    tslib_1.__param(0, (0, common_1.Inject)(flowda_shared_1.AuthService)),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof flowda_shared_1.AuthService !== "undefined" && flowda_shared_1.AuthService) === "function" ? _a : Object])
 ], AppExceptionFilter);
 exports.AppExceptionFilter = AppExceptionFilter;
 
@@ -599,9 +611,11 @@ const prismaSchema_service_1 = __webpack_require__("../../libs/flowda-shared/src
 const data_service_1 = __webpack_require__("../../libs/flowda-shared/src/services/data/data.service.ts");
 const schema_service_1 = __webpack_require__("../../libs/flowda-shared/src/services/schema/schema.service.ts");
 const schemaTransformer_1 = __webpack_require__("../../libs/flowda-shared/src/services/schema/schemaTransformer.ts");
+const auth_service_1 = __webpack_require__("../../libs/flowda-shared/src/services/auth/auth.service.ts");
 exports.flowdaSharedModule = new inversify_1.ContainerModule((bind) => {
     (0, flowda_shared_1.bindService)(bind, flowda_shared_1.ServiceSymbol, data_service_1.DataService);
     (0, flowda_shared_1.bindService)(bind, flowda_shared_1.ServiceSymbol, schema_service_1.SchemaService);
+    (0, flowda_shared_1.bindService)(bind, flowda_shared_1.ServiceSymbol, auth_service_1.AuthService);
     bind(prismaSchema_service_1.PrismaSchemaService).toSelf().inSingletonScope();
     bind(schemaTransformer_1.SchemaTransformer).toSelf().inTransientScope();
     bind('Factory<SchemaTransformer>').toFactory(context => {
@@ -633,6 +647,7 @@ tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared/src/services/
 tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared/src/services/schema/schemaTransformer.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared/src/services/schema/schema.service.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared/src/services/data/data.service.ts"), exports);
+tslib_1.__exportStar(__webpack_require__("../../libs/flowda-shared/src/services/auth/auth.service.ts"), exports);
 
 
 /***/ }),
@@ -672,12 +687,33 @@ exports.CustomError = CustomError;
 
 /***/ }),
 
+/***/ "../../libs/flowda-shared/src/services/auth/auth.service.ts":
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AuthService = void 0;
+const tslib_1 = __webpack_require__("tslib");
+const inversify_1 = __webpack_require__("inversify");
+let AuthService = class AuthService {
+    constructor() {
+        this.uid = null;
+    }
+};
+AuthService = tslib_1.__decorate([
+    (0, inversify_1.injectable)()
+], AuthService);
+exports.AuthService = AuthService;
+
+
+/***/ }),
+
 /***/ "../../libs/flowda-shared/src/services/data/data.service.ts":
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 var DataService_1;
-var _a;
+var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DataService = void 0;
 const tslib_1 = __webpack_require__("tslib");
@@ -686,6 +722,7 @@ const _ = tslib_1.__importStar(__webpack_require__("lodash"));
 const prismaSchema_service_1 = __webpack_require__("../../libs/flowda-shared/src/services/schema/prismaSchema.service.ts");
 const types_1 = __webpack_require__("../../libs/flowda-shared/src/interfaces/types.ts");
 const matchPath_1 = __webpack_require__("../../libs/flowda-shared/src/utils/matchPath.ts");
+const auth_service_1 = __webpack_require__("../../libs/flowda-shared/src/services/auth/auth.service.ts");
 /*
 todo: 增加 reference_type 区分是如何做 nest
 e.g. Customer#weixinProfile 和 Order#customerId 的 nest 查询有区别
@@ -693,9 +730,10 @@ e.g. Customer#weixinProfile 和 Order#customerId 的 nest 查询有区别
 let DataService = DataService_1 = class DataService {
     constructor(
     // todo: prisma 要不要强类型
-    prisma, prismaSchemaService, loggerFactory) {
+    prisma, prismaSchemaService, auth, loggerFactory) {
         this.prisma = prisma;
         this.prismaSchemaService = prismaSchemaService;
+        this.auth = auth;
         this.logger = loggerFactory(DataService_1.name);
     }
     get(pathname, query) {
@@ -713,6 +751,60 @@ let DataService = DataService_1 = class DataService {
             return this.prisma[resource][action](param);
         });
     }
+    put(path, values) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            const matchRet = (0, matchPath_1.matchPath)(path);
+            const { resource, id } = matchRet[matchRet.length - 1];
+            const nid = yield this.parseId(resource, id);
+            values.id = nid;
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            const ret = yield this.prisma[resource].update({
+                where: { id: nid },
+                data: values,
+            });
+            this.logger.log(`uid ${this.auth.uid} PUT path: ${path}, values: ${JSON.stringify(values)}`);
+            return ret;
+        });
+    }
+    post(path, values) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            const matchRet = (0, matchPath_1.matchPath)(path);
+            const { resource } = matchRet[matchRet.length - 1];
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            const ret = yield this.prisma[resource].create({
+                data: values,
+            });
+            this.logger.log(`uid ${this.auth.uid} POST path: ${path}, values: ${JSON.stringify(values)}`);
+            return ret;
+        });
+    }
+    remove(path) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            const matchRet = (0, matchPath_1.matchPath)(path);
+            const { resource, id } = matchRet[matchRet.length - 1];
+            let nid;
+            if (id == null) {
+                throw new Error(`remove ${resource}, id null`);
+            }
+            else {
+                nid = yield this.parseId(resource, id);
+            }
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            const ret = yield this.prisma[resource].update({
+                where: {
+                    id: nid,
+                },
+                data: {
+                    isDeleted: true,
+                },
+            });
+            this.logger.log(`uid ${this.auth.uid} DELETE path: ${path}`);
+            return ret;
+        });
+    }
     parseId(resource, id) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
             const modelName = (0, matchPath_1.toModelName)(resource);
@@ -723,61 +815,14 @@ let DataService = DataService_1 = class DataService {
             return nid;
         });
     }
-    put(path, values) {
-        return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            const ret = (0, matchPath_1.matchPath)(path);
-            const { resource, id } = ret[ret.length - 1];
-            const nid = yield this.parseId(resource, id);
-            values.id = nid;
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            return this.prisma[resource].update({
-                where: { id: nid },
-                data: values,
-            });
-        });
-    }
-    post(path, values) {
-        return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            const ret = (0, matchPath_1.matchPath)(path);
-            const { resource } = ret[ret.length - 1];
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            return this.prisma[resource].create({
-                data: values,
-            });
-        });
-    }
-    remove(path) {
-        return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            const ret = (0, matchPath_1.matchPath)(path);
-            const { resource, id } = ret[ret.length - 1];
-            let nid;
-            if (id == null) {
-                throw new Error(`remove ${resource}, id null`);
-            }
-            else {
-                nid = yield this.parseId(resource, id);
-            }
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            return this.prisma[resource].update({
-                where: {
-                    id: nid,
-                },
-                data: {
-                    isDeleted: true,
-                },
-            });
-        });
-    }
 };
 DataService = DataService_1 = tslib_1.__decorate([
     (0, inversify_1.injectable)(),
     tslib_1.__param(0, (0, inversify_1.inject)(types_1.PrismaClientSymbol)),
     tslib_1.__param(1, (0, inversify_1.inject)(prismaSchema_service_1.PrismaSchemaService)),
-    tslib_1.__param(2, (0, inversify_1.inject)('Factory<Logger>')),
-    tslib_1.__metadata("design:paramtypes", [Object, typeof (_a = typeof prismaSchema_service_1.PrismaSchemaService !== "undefined" && prismaSchema_service_1.PrismaSchemaService) === "function" ? _a : Object, Function])
+    tslib_1.__param(2, (0, inversify_1.inject)(auth_service_1.AuthService)),
+    tslib_1.__param(3, (0, inversify_1.inject)('Factory<Logger>')),
+    tslib_1.__metadata("design:paramtypes", [Object, typeof (_a = typeof prismaSchema_service_1.PrismaSchemaService !== "undefined" && prismaSchema_service_1.PrismaSchemaService) === "function" ? _a : Object, typeof (_b = typeof auth_service_1.AuthService !== "undefined" && auth_service_1.AuthService) === "function" ? _b : Object, Function])
 ], DataService);
 exports.DataService = DataService;
 
