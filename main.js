@@ -413,7 +413,7 @@ let UserJwtStrategy = UserJwtStrategy_1 = class UserJwtStrategy extends (0, pass
     validate(payload) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
             this.logger.log(`expires at ${new Date(payload.exp0)}`);
-            this.auth.uid = payload.uid;
+            this.auth.setUID(payload.uid);
             return payload;
         });
     }
@@ -542,7 +542,7 @@ let AppExceptionFilter = AppExceptionFilter_1 = class AppExceptionFilter {
                 this.logger.error(`HttpException|${exception.getStatus()}|${exception.message}`);
             }
             if (exception.getStatus() === 401) {
-                this.auth.uid = null;
+                this.auth.setUID(null);
             }
             response.status(exception.getStatus()).json({
                 code: exception.getStatus(),
@@ -691,17 +691,33 @@ exports.CustomError = CustomError;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+var AuthService_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AuthService = void 0;
 const tslib_1 = __webpack_require__("tslib");
 const inversify_1 = __webpack_require__("inversify");
-let AuthService = class AuthService {
-    constructor() {
+let AuthService = AuthService_1 = class AuthService {
+    constructor(
+    // todo: prisma 要不要强类型
+    loggerFactory) {
         this.uid = null;
+        this.logger = loggerFactory(AuthService_1.name);
+    }
+    setUID(uid) {
+        if (uid == null) {
+            this.logger.log(`set uid ${this.uid} to null`);
+        }
+        else {
+            if (this.uid == null)
+                this.logger.log(`set uid ${uid}`);
+        }
+        this.uid = uid;
     }
 };
-AuthService = tslib_1.__decorate([
-    (0, inversify_1.injectable)()
+AuthService = AuthService_1 = tslib_1.__decorate([
+    (0, inversify_1.injectable)(),
+    tslib_1.__param(0, (0, inversify_1.inject)('Factory<Logger>')),
+    tslib_1.__metadata("design:paramtypes", [Function])
 ], AuthService);
 exports.AuthService = AuthService;
 
