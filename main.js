@@ -1576,7 +1576,7 @@ exports.WMS_ENV = (0, znv_1.parseEnv)(process.env, {
     REFRESH_TOKEN_SECRET: zod_1.z.string().min(1),
     REFRESH_TOKEN_EXPIRE: zod_1.z.number().default(7 * 24 * 60 * 60),
     ACCESS_TOKEN_SECRET: zod_1.z.string().min(1),
-    ACCESS_TOKEN_EXPIRE: zod_1.z.number().default(15 * 60),
+    ACCESS_TOKEN_EXPIRE: zod_1.z.number().default(25 * 60),
     C7_REST_URL: zod_1.z.string().min(1),
 });
 
