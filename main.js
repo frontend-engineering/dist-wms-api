@@ -1306,7 +1306,7 @@ exports.matchPath = exports.toModelName = void 0;
 const tslib_1 = __webpack_require__("tslib");
 const plur = tslib_1.__importStar(__webpack_require__("pluralize"));
 const _ = tslib_1.__importStar(__webpack_require__("lodash"));
-const REG = /(([a-z_]+s)\/?([a-z0-9-_]+)?)+/g;
+const REG = /(([a-z_]+s)\/?([A-Za-z0-9-_:]+)?)+/g;
 function toModelName(s) {
     return _.startCase(_.camelCase(s)).replace(/ /g, '');
 }
