@@ -6,7 +6,7 @@
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
-var _a, _b;
+var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppController = void 0;
 const tslib_1 = __webpack_require__("tslib");
@@ -14,9 +14,10 @@ const common_1 = __webpack_require__("@nestjs/common");
 const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
 const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
 let AppController = class AppController {
-    constructor(schema, post) {
+    constructor(schema, post, user) {
         this.schema = schema;
         this.post = post;
+        this.user = user;
     }
     hi() {
         return { hi: 'world' };
@@ -26,6 +27,9 @@ let AppController = class AppController {
     }
     getPosts() {
         return this.post.findAll();
+    }
+    findByUsername(username) {
+        return this.user.findByUsername(username);
     }
 };
 tslib_1.__decorate([
@@ -46,9 +50,16 @@ tslib_1.__decorate([
     tslib_1.__metadata("design:paramtypes", []),
     tslib_1.__metadata("design:returntype", void 0)
 ], AppController.prototype, "getPosts", null);
+tslib_1.__decorate([
+    (0, common_1.Get)('/findByUsername'),
+    tslib_1.__param(0, (0, common_1.Query)('username')),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", [String]),
+    tslib_1.__metadata("design:returntype", void 0)
+], AppController.prototype, "findByUsername", null);
 AppController = tslib_1.__decorate([
     (0, common_1.Controller)('/apps'),
-    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof flowda_shared_1.SchemaService !== "undefined" && flowda_shared_1.SchemaService) === "function" ? _a : Object, typeof (_b = typeof wms_services_1.PostService !== "undefined" && wms_services_1.PostService) === "function" ? _b : Object])
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof flowda_shared_1.SchemaService !== "undefined" && flowda_shared_1.SchemaService) === "function" ? _a : Object, typeof (_b = typeof wms_services_1.PostService !== "undefined" && wms_services_1.PostService) === "function" ? _b : Object, typeof (_c = typeof wms_services_1.UserService !== "undefined" && wms_services_1.UserService) === "function" ? _c : Object])
 ], AppController);
 exports.AppController = AppController;
 
@@ -1938,6 +1949,15 @@ let UserService = UserService_1 = class UserService {
     }
     verifyAccessToken(at) {
         return jwt.verify(at, wms_env_1.WMS_ENV.ACCESS_TOKEN_SECRET);
+    }
+    findByUsername(username) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            return this.prisma.user.findFirstOrThrow({
+                where: {
+                    username,
+                },
+            });
+        });
     }
 };
 UserService = UserService_1 = tslib_1.__decorate([
