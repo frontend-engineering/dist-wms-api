@@ -697,9 +697,7 @@ exports.AuthService = void 0;
 const tslib_1 = __webpack_require__("tslib");
 const inversify_1 = __webpack_require__("inversify");
 let AuthService = AuthService_1 = class AuthService {
-    constructor(
-    // todo: prisma 要不要强类型
-    loggerFactory) {
+    constructor(loggerFactory) {
         this.uid = null;
         this.logger = loggerFactory(AuthService_1.name);
     }
@@ -2176,6 +2174,7 @@ const app_module_1 = __webpack_require__("./src/app/app.module.ts");
 const http_proxy_middleware_1 = __webpack_require__("http-proxy-middleware");
 const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
 const passport_jwt_1 = __webpack_require__("passport-jwt");
+const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
 function bootstrap() {
     return tslib_1.__awaiter(this, void 0, void 0, function* () {
         const app = yield core_1.NestFactory.create(app_module_1.AppModule);
@@ -2183,6 +2182,7 @@ function bootstrap() {
         const globalPrefix = 'api';
         app.setGlobalPrefix(globalPrefix);
         const user = app.get(wms_services_1.UserService);
+        const auth = app.get(flowda_shared_1.AuthService);
         app.use((req, res, next) => {
             if (req.originalUrl.includes('favicon.ico')) {
                 res.status(204).end();
@@ -2194,9 +2194,11 @@ function bootstrap() {
                     try {
                         const authed = user.verifyAccessToken(bearerToken);
                         if (authed) {
+                            auth.setUID(authed.uid);
                             next();
                         }
                         else {
+                            auth.setUID(null);
                             res.status(401).json({
                                 message: '[PROXY] Unauthorized',
                             });
