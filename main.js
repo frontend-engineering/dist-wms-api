@@ -1356,7 +1356,7 @@ exports.zt = tslib_1.__importStar(__webpack_require__("../../libs/prisma-wms/src
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PostWithRelationsSchema = exports.PostSchema = exports.UserProfileWithRelationsSchema = exports.UserProfileSchema = exports.UserWithRelationsSchema = exports.UserSchema = exports.MemberInfoSchema = exports.TaskFormRelationSchema = exports.UserGroupSchema = exports.UserStatusSchema = exports.UserScalarFieldEnumSchema = exports.UserProfileScalarFieldEnumSchema = exports.TransactionIsolationLevelSchema = exports.TaskFormRelationScalarFieldEnumSchema = exports.SortOrderSchema = exports.PostScalarFieldEnumSchema = exports.MemberInfoScalarFieldEnumSchema = void 0;
+exports.RepairMaterialSchema = exports.EquipmentSchema = exports.PostWithRelationsSchema = exports.PostSchema = exports.UserProfileWithRelationsSchema = exports.UserProfileSchema = exports.UserWithRelationsSchema = exports.UserSchema = exports.MemberInfoSchema = exports.TaskFormRelationSchema = exports.UserGroupSchema = exports.UserStatusSchema = exports.UserScalarFieldEnumSchema = exports.UserProfileScalarFieldEnumSchema = exports.TransactionIsolationLevelSchema = exports.TaskFormRelationScalarFieldEnumSchema = exports.SortOrderSchema = exports.RepairMaterialScalarFieldEnumSchema = exports.PostScalarFieldEnumSchema = exports.MemberInfoScalarFieldEnumSchema = exports.EquipmentScalarFieldEnumSchema = void 0;
 const zod_1 = __webpack_require__("zod");
 /////////////////////////////////////////
 // HELPER FUNCTIONS
@@ -1364,8 +1364,10 @@ const zod_1 = __webpack_require__("zod");
 /////////////////////////////////////////
 // ENUMS
 /////////////////////////////////////////
+exports.EquipmentScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'description', 'purchaseDate']);
 exports.MemberInfoScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'gender']);
 exports.PostScalarFieldEnumSchema = zod_1.z.enum(['id', 'title', 'content', 'published', 'authorId']);
+exports.RepairMaterialScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted']);
 exports.SortOrderSchema = zod_1.z.enum(['asc', 'desc']);
 exports.TaskFormRelationScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'taskDefinitionKey', 'formKey']);
 exports.TransactionIsolationLevelSchema = zod_1.z.enum(['ReadUncommitted', 'ReadCommitted', 'RepeatableRead', 'Serializable']);
@@ -1443,6 +1445,27 @@ exports.PostSchema = zod_1.z.object({
 exports.PostWithRelationsSchema = exports.PostSchema.merge(zod_1.z.object({
     author: zod_1.z.lazy(() => exports.UserWithRelationsSchema),
 }));
+/////////////////////////////////////////
+// EQUIPMENT SCHEMA
+/////////////////////////////////////////
+exports.EquipmentSchema = zod_1.z.object({
+    id: zod_1.z.number().int(),
+    createdAt: zod_1.z.date(),
+    updatedAt: zod_1.z.date(),
+    isDeleted: zod_1.z.boolean().nullable(),
+    name: zod_1.z.string().openapi({ "title": "设备名" }),
+    description: zod_1.z.string().openapi({ "title": "设备描述" }),
+    purchaseDate: zod_1.z.date().openapi({ "title": "购买日期" }),
+}).openapi({ "primary_key": "id", "display_name": "设备" });
+/////////////////////////////////////////
+// REPAIR MATERIAL SCHEMA
+/////////////////////////////////////////
+exports.RepairMaterialSchema = zod_1.z.object({
+    id: zod_1.z.number().int(),
+    createdAt: zod_1.z.date(),
+    updatedAt: zod_1.z.date(),
+    isDeleted: zod_1.z.boolean().nullable(),
+}).openapi({ "primary_key": "id", "display_name": "维修材料" });
 
 
 /***/ }),
@@ -1522,7 +1545,7 @@ var UserError;
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ManagerApproveSchema = exports.AddToAdminResourceSchema = exports.WorkflowUserResourceSchema = exports.ProcessDefinitionResourceSchema = exports.TaskResourceSchema = exports.TaskFormRelationResourceSchema = exports.UserResourceSchema = exports.MemberInfoResourceSchema = void 0;
+exports.EquipmentResourceSchema = exports.ManagerApproveSchema = exports.AddToAdminResourceSchema = exports.WorkflowUserResourceSchema = exports.ProcessDefinitionResourceSchema = exports.TaskResourceSchema = exports.TaskFormRelationResourceSchema = exports.UserResourceSchema = exports.MemberInfoResourceSchema = void 0;
 const prisma_wms_1 = __webpack_require__("../../libs/prisma-wms/src/index.ts");
 const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
 const zod_1 = __webpack_require__("zod");
@@ -1645,6 +1668,13 @@ exports.ManagerApproveSchema = zod_1.z
     }),
 })
     .openapi({});
+exports.EquipmentResourceSchema = prisma_wms_1.EquipmentSchema.omit({
+    isDeleted: true,
+}).extend({
+    __meta: (0, flowda_shared_1.meta)({
+        extends: 'EquipmentSchema',
+    }),
+});
 
 
 /***/ }),
