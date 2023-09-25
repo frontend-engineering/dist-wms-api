@@ -667,7 +667,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CustomError = exports.CustomZodSchemaSymbol = exports.PrismaZodSchemaSymbol = exports.APISymbol = exports.ServiceSymbol = exports.PrismaClientSymbol = void 0;
+exports.CustomError = exports.CustomZodSchemaSymbol = exports.PrismaZodSchemaSymbol = exports.URLSymbol = exports.APISymbol = exports.ServiceSymbol = exports.PrismaClientSymbol = void 0;
 exports.PrismaClientSymbol = Symbol('PrismaClient');
 /**
  * getServices 方法会将 inversify module 转换成 nestjs module，这样 nestjs controller 就可以使用了
@@ -675,6 +675,7 @@ exports.PrismaClientSymbol = Symbol('PrismaClient');
  */
 exports.ServiceSymbol = Symbol('Service');
 exports.APISymbol = Symbol('API');
+exports.URLSymbol = Symbol.for('URL');
 exports.PrismaZodSchemaSymbol = Symbol.for('PrismaZodSchema');
 exports.CustomZodSchemaSymbol = Symbol.for('CustomZodSchema');
 class CustomError extends Error {
@@ -1303,7 +1304,7 @@ exports.getServices = getServices;
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.matchPath = exports.toSchemaName = exports.toPath = exports.toModelName = void 0;
+exports.matchPath = exports.toSchemaName = exports.toPath = exports.toModelName = exports.isLikeNumber = void 0;
 const tslib_1 = __webpack_require__("tslib");
 const plur = tslib_1.__importStar(__webpack_require__("pluralize"));
 const _ = tslib_1.__importStar(__webpack_require__("lodash"));
@@ -1311,9 +1312,10 @@ const _ = tslib_1.__importStar(__webpack_require__("lodash"));
 const REG = /(([a-z_]+s*)\/?([A-Za-z0-9-_:]+)?)+/g;
 const NUM_REG = /^-?\d+(\.\d+)?$/;
 // todo: 暂时没想到更精确的方法，这个应该能覆盖 100%
-function isNumber(value) {
+function isLikeNumber(value) {
     return NUM_REG.test(value);
 }
+exports.isLikeNumber = isLikeNumber;
 function toModelName(s) {
     return _.startCase(_.camelCase(s)).replace(/ /g, '');
 }
@@ -1338,7 +1340,7 @@ function matchPath(path) {
                 resource: _.camelCase(p),
                 resourceSchema: toSchemaName(resource),
                 origin: resource,
-                id: isNumber(id) ? _.toNumber(id) : id,
+                id: isLikeNumber(id) ? _.toNumber(id) : id,
             };
         });
         return ret2;
