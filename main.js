@@ -6,7 +6,7 @@
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
-var _a, _b;
+var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppController = void 0;
 const tslib_1 = __webpack_require__("tslib");
@@ -14,9 +14,10 @@ const common_1 = __webpack_require__("@nestjs/common");
 const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
 const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
 let AppController = class AppController {
-    constructor(schema, user) {
+    constructor(schema, user, custom) {
         this.schema = schema;
         this.user = user;
+        this.custom = custom;
     }
     hi() {
         return { hi: 'world' };
@@ -26,6 +27,9 @@ let AppController = class AppController {
     }
     findByUsername(username) {
         return this.user.findByUsername(username);
+    }
+    getProductLineAndEquipment() {
+        return this.custom.getProductLineAndEquipment();
     }
 };
 tslib_1.__decorate([
@@ -47,9 +51,15 @@ tslib_1.__decorate([
     tslib_1.__metadata("design:paramtypes", [String]),
     tslib_1.__metadata("design:returntype", void 0)
 ], AppController.prototype, "findByUsername", null);
+tslib_1.__decorate([
+    (0, common_1.Get)('/getProductLineAndEquipment'),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", []),
+    tslib_1.__metadata("design:returntype", void 0)
+], AppController.prototype, "getProductLineAndEquipment", null);
 AppController = tslib_1.__decorate([
     (0, common_1.Controller)('/apps'),
-    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof flowda_shared_1.SchemaService !== "undefined" && flowda_shared_1.SchemaService) === "function" ? _a : Object, typeof (_b = typeof wms_services_1.UserService !== "undefined" && wms_services_1.UserService) === "function" ? _b : Object])
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof flowda_shared_1.SchemaService !== "undefined" && flowda_shared_1.SchemaService) === "function" ? _a : Object, typeof (_b = typeof wms_services_1.UserService !== "undefined" && wms_services_1.UserService) === "function" ? _b : Object, typeof (_c = typeof wms_services_1.CustomService !== "undefined" && wms_services_1.CustomService) === "function" ? _c : Object])
 ], AppController);
 exports.AppController = AppController;
 
@@ -770,16 +780,9 @@ let DataService = DataService_1 = class DataService {
     }
     put(path, values) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            const matchRet = (0, matchPath_1.matchPath)(path);
-            const { resource, id } = matchRet[matchRet.length - 1];
-            const nid = yield this.parseId(resource, id);
-            values.id = nid;
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            const ret = yield this.prisma[resource].update({
-                where: { id: nid },
-                data: values,
-            });
+            const updateParamRet = this.prismaSchemaService.toUpdateParam(path, values);
+            const { resource, param } = updateParamRet;
+            const ret = yield this.prisma[resource].update(param);
             this.logger.log(`uid ${this.auth.uid} PUT path: ${path}, values: ${JSON.stringify(values)}`);
             return ret;
         });
@@ -787,9 +790,8 @@ let DataService = DataService_1 = class DataService {
     post(path, values) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
             const matchRet = (0, matchPath_1.matchPath)(path);
-            const { resource } = matchRet[matchRet.length - 1];
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
+            const { resource, resourceSchema } = matchRet[matchRet.length - 1];
+            this.prismaSchemaService.removeRelationFields(resourceSchema, values);
             const ret = yield this.prisma[resource].create({
                 data: values,
             });
@@ -808,8 +810,6 @@ let DataService = DataService_1 = class DataService {
             else {
                 nid = yield this.parseId(resource, id);
             }
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
             const ret = yield this.prisma[resource].update({
                 where: {
                     id: nid,
@@ -869,13 +869,16 @@ exports.meta = meta;
 
 
 var PrismaSchemaService_1;
+var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrismaSchemaService = void 0;
 const tslib_1 = __webpack_require__("tslib");
 const inversify_1 = __webpack_require__("inversify");
 const matchPath_1 = __webpack_require__("../../libs/flowda-shared/src/utils/matchPath.ts");
+const schema_service_1 = __webpack_require__("../../libs/flowda-shared/src/services/schema/schema.service.ts");
 let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
-    constructor(loggerFactory) {
+    constructor(schemaService, loggerFactory) {
+        this.schemaService = schemaService;
         this.logger = loggerFactory(PrismaSchemaService_1.name);
     }
     toPrismaSelect(fields) {
@@ -894,7 +897,7 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
         if (parsedPath.length === 0)
             return {};
         const { resource, id } = parsedPath[parsedPath.length - 1];
-        let action = '';
+        let action;
         let param = {};
         const queryFields = query.fields;
         const fields = this.toPrismaSelect(queryFields[resource]);
@@ -952,11 +955,54 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
         this.logger.log('------------------------------------');
         return ret;
     }
+    toUpdateParam(pathname, values) {
+        this.logger.log('------------------------------------');
+        this.logger.log(`pathname: ${pathname}, body: ${JSON.stringify(values)}`);
+        const matchRet = (0, matchPath_1.matchPath)(pathname);
+        const { resource, id, resourceSchema } = matchRet[matchRet.length - 1];
+        this.removeRelationFields(resourceSchema, values);
+        const ret = {
+            resource,
+            param: {
+                where: { id: id },
+                data: values,
+            },
+        };
+        this.logger.log(JSON.stringify(ret));
+        this.logger.log('------------------------------------');
+        return ret;
+    }
+    removeRelationFields(resourceSchema, values) {
+        const schemaCache = this.schemaService.getSchemaCache();
+        // todo: 目前是通过显式声明 x-relationField 来删除 put 时候的 reference 值
+        const relationFields = [];
+        if (schemaCache) {
+            const theResourceSchema = schemaCache[resourceSchema];
+            // console.log(theResourceSchema)
+            if (theResourceSchema) {
+                Object.keys(values).forEach((k) => {
+                    var _a;
+                    const kProp = theResourceSchema.columns && theResourceSchema.columns.find(col => col.name === k);
+                    if (kProp && kProp.column_type === 'reference') {
+                        const relationField = (_a = kProp.reference) === null || _a === void 0 ? void 0 : _a['x-relationField'];
+                        if (relationField) {
+                            relationFields.push(relationField);
+                        }
+                    }
+                });
+            }
+        }
+        // console.log(relationFields)
+        relationFields.forEach(k => {
+            delete values[k];
+        });
+    }
 };
 PrismaSchemaService = PrismaSchemaService_1 = tslib_1.__decorate([
     (0, inversify_1.injectable)(),
-    tslib_1.__param(0, (0, inversify_1.inject)('Factory<Logger>')),
-    tslib_1.__metadata("design:paramtypes", [Function])
+    tslib_1.__param(0, (0, inversify_1.inject)(schema_service_1.SchemaService)),
+    tslib_1.__param(1, (0, inversify_1.inject)('Factory<Logger>')),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof schema_service_1.SchemaService !== "undefined" && schema_service_1.SchemaService) === "function" ? _a : Object, Function])
 ], PrismaSchemaService);
 exports.PrismaSchemaService = PrismaSchemaService;
 
@@ -993,8 +1039,15 @@ let SchemaService = SchemaService_1 = class SchemaService {
             }
             return acc;
         }, {});
+        this.schemaCache = schema;
         // console.timeEnd('generate schema')
         return schema;
+    }
+    getSchemaCache() {
+        if (!this.schemaCache) {
+            return {};
+        }
+        return this.schemaCache;
     }
 };
 SchemaService = SchemaService_1 = tslib_1.__decorate([
@@ -1115,8 +1168,9 @@ let SchemaTransformer = SchemaTransformer_1 = class SchemaTransformer {
         const { primary_key, display_name, display_column } = ref;
         return {
             model_name: jsProp.reference,
+            'x-relationField': jsProp['x-relationField'] || k.replace('Id', ''),
             primary_key,
-            display_name,
+            display_name: jsProp.display_name || display_name,
             display_column,
             // foreign_key: jsProp.foreign_key,
         };
@@ -1278,11 +1332,12 @@ exports.bindService = bindService;
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.error = exports.warn = exports.info = void 0;
+exports.error = exports.warn = exports.info = exports.debug = void 0;
 const levelColorMap = {
     0: '#c0392b',
     1: '#f39c12',
-    3: '#00BCD4', // Cyan
+    3: '#00BCD4',
+    4: '#ccc',
 };
 function style(level) {
     return `
@@ -1293,6 +1348,10 @@ function style(level) {
   padding: 2px 0.5em;
 `;
 }
+function debug(msg) {
+    return [`%c debug `, style(4), '', msg];
+}
+exports.debug = debug;
 function info(msg) {
     return [`%c info `, style(3), '', msg];
 }
@@ -1347,7 +1406,7 @@ function isLikeNumber(value) {
 }
 exports.isLikeNumber = isLikeNumber;
 function toModelName(s) {
-    return _.startCase(_.camelCase(s)).replace(/ /g, '');
+    return _.startCase(_.camelCase(plur.singular(s))).replace(/ /g, '');
 }
 exports.toModelName = toModelName;
 function toPath(modelName) {
@@ -1428,7 +1487,7 @@ exports.PartScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt'
 exports.ProductLineScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'description']);
 exports.ReceiptScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'lot', 'partId']);
 exports.RepairMaterialInventoryScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'description', 'quantity', 'minimumQuantity', 'equipmentId']);
-exports.RepairRecordScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'equipmentId', 'description', 'status', 'type']);
+exports.RepairRecordScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'type', 'equipmentId', 'status', 'description']);
 exports.SortOrderSchema = zod_1.z.enum(['asc', 'desc']);
 exports.TaskFormRelationScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'taskDefinitionKey', 'formKey']);
 exports.TransactionIsolationLevelSchema = zod_1.z.enum(['ReadUncommitted', 'ReadCommitted', 'RepeatableRead', 'Serializable']);
@@ -1467,7 +1526,7 @@ exports.UserSchema = zod_1.z.object({
     username: zod_1.z.string(),
     hashedPassword: zod_1.z.string().nullable(),
     hashedRefreshToken: zod_1.z.string().nullable(),
-}).openapi({ "display_name": "员工" });
+}).openapi({ "display_name": "员工", "display_column": "username" });
 exports.UserWithRelationsSchema = exports.UserSchema.merge(zod_1.z.object({
     profile: zod_1.z.lazy(() => exports.UserProfileWithRelationsSchema).nullable(),
     reviewedOperationInspectionRecords: zod_1.z.lazy(() => exports.OperationInspectionRecordWithRelationsSchema).array(),
@@ -1541,15 +1600,18 @@ exports.RepairMaterialInventoryWithRelationsSchema = exports.RepairMaterialInven
 // REPAIR RECORD SCHEMA
 /////////////////////////////////////////
 exports.RepairRecordSchema = zod_1.z.object({
-    status: exports.RepairRecordStatusSchema.openapi({ "title": "状态" }),
     type: exports.RepairTypeSchema.openapi({ "title": "类型" }),
+    status: exports.RepairRecordStatusSchema.openapi({ "title": "状态" }),
     id: zod_1.z.number().int(),
     createdAt: zod_1.z.date(),
     updatedAt: zod_1.z.date(),
     isDeleted: zod_1.z.boolean(),
-    equipmentId: zod_1.z.number().int().openapi({ "reference": "Equipment" }),
+    /**
+     * @schema.x-relationField equipment
+     */
+    equipmentId: zod_1.z.number().int().openapi({ "reference": "Equipment", "x-relationField": "equipment" }),
     description: zod_1.z.string().openapi({ "title": "备注", "column_type": "textarea" }),
-}).openapi({ "primary_key": "id", "display_name": "维修记录" });
+}).openapi({ "primary_key": "id", "display_name": "维修记录", "display_column": "equipmentId" });
 exports.RepairRecordWithRelationsSchema = exports.RepairRecordSchema.merge(zod_1.z.object({
     equipment: zod_1.z.lazy(() => exports.EquipmentWithRelationsSchema),
 }));
@@ -1614,7 +1676,7 @@ exports.NonconformItemSchema = zod_1.z.object({
     partId: zod_1.z.number().int().openapi({ "reference": "Part" }),
     description: zod_1.z.string().openapi({ "title": "不良描述" }),
     note: zod_1.z.string().nullable().openapi({ "title": "备注" }),
-}).openapi({ "display_name": "不合格品记录", "display_column": "part" });
+}).openapi({ "display_name": "不合格品记录", "display_column": "partId" });
 exports.NonconformItemWithRelationsSchema = exports.NonconformItemSchema.merge(zod_1.z.object({
     part: zod_1.z.lazy(() => exports.PartWithRelationsSchema),
 }));
@@ -1663,7 +1725,7 @@ exports.ReceiptSchema = zod_1.z.object({
 }).openapi({ "display_name": "收货单", "display_column": "lot" });
 exports.ReceiptWithRelationsSchema = exports.ReceiptSchema.merge(zod_1.z.object({
     part: zod_1.z.lazy(() => exports.PartWithRelationsSchema),
-    incomingInspectionRecord: zod_1.z.lazy(() => exports.IncomingInspectionRecordWithRelationsSchema).nullable().openapi({ "virtual": "true" }),
+    incomingInspectionRecord: zod_1.z.lazy(() => exports.IncomingInspectionRecordWithRelationsSchema).nullable().openapi({ "reference": "IncomingInspectionRecord" }),
 }));
 /////////////////////////////////////////
 // INCOMING INSPECTION RECORD SCHEMA
@@ -1677,7 +1739,7 @@ exports.IncomingInspectionRecordSchema = zod_1.z.object({
     note: zod_1.z.string().openapi({ "title": "备注" }),
     receiptId: zod_1.z.number().int().openapi({ "reference": "Receipt" }),
     incomingInspectionSpecId: zod_1.z.number().int().openapi({ "reference": "IncomingInspectionSpec" }),
-}).openapi({ "display_name": "进料检记录", "display_column": "result" });
+}).openapi({ "display_name": "进料检记录", "display_column": "receiptId" });
 exports.IncomingInspectionRecordWithRelationsSchema = exports.IncomingInspectionRecordSchema.merge(zod_1.z.object({
     receipt: zod_1.z.lazy(() => exports.ReceiptWithRelationsSchema),
     incomingInspectionSpec: zod_1.z.lazy(() => exports.IncomingInspectionSpecWithRelationsSchema),
@@ -1694,7 +1756,7 @@ exports.IncomingInspectionRecordItemSchema = zod_1.z.object({
     result: zod_1.z.boolean().openapi({ "title": "结果" }),
     inspectionIteration: zod_1.z.string().openapi({ "title": "测量#" }),
     incomingInspectionRecordId: zod_1.z.number().int().openapi({ "reference": "IncomingInspectionRecord" }),
-}).openapi({ "display_name": "进料检记录详情", "display_column": "result" });
+}).openapi({ "display_name": "进料检记录详情" });
 exports.IncomingInspectionRecordItemWithRelationsSchema = exports.IncomingInspectionRecordItemSchema.merge(zod_1.z.object({
     incomingInspectionRecord: zod_1.z.lazy(() => exports.IncomingInspectionRecordWithRelationsSchema),
 }));
@@ -1723,8 +1785,14 @@ exports.OperationInspectionRecordSchema = zod_1.z.object({
     isDeleted: zod_1.z.boolean(),
     note: zod_1.z.string().nullable().openapi({ "title": "备注" }),
     workerOrderId: zod_1.z.number().int().openapi({ "reference": "WorkerOrder" }),
-    inspectorId: zod_1.z.number().int(),
-    reviewerId: zod_1.z.number().int(),
+    /**
+     * @schema.x-relationField inspector
+     */
+    inspectorId: zod_1.z.number().int().openapi({ "reference": "User", "x-relationField": "inspector", "display_name": "检验员" }),
+    /**
+     * @schema.x-relationField reviewer
+     */
+    reviewerId: zod_1.z.number().int().openapi({ "reference": "User", "x-relationField": "reviewer", "display_name": "审核员" }),
 }).openapi({ "display_name": "过程检记录", "display_column": "result" });
 exports.OperationInspectionRecordWithRelationsSchema = exports.OperationInspectionRecordSchema.merge(zod_1.z.object({
     workerOrder: zod_1.z.lazy(() => exports.WorkerOrderWithRelationsSchema),
@@ -1766,6 +1834,7 @@ tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/lib/schema
 tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/lib/wms-env.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/services/task.service.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/services/user.service.ts"), exports);
+tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/services/custom.service.ts"), exports);
 
 
 /***/ }),
@@ -2077,6 +2146,55 @@ exports.WMS_ENV = (0, znv_1.parseEnv)(process.env, {
 
 /***/ }),
 
+/***/ "../../libs/wms-services/src/services/custom.service.ts":
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+var CustomService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CustomService = void 0;
+const tslib_1 = __webpack_require__("tslib");
+const inversify_1 = __webpack_require__("inversify");
+const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
+const db = tslib_1.__importStar(__webpack_require__("@prisma/client-wms"));
+let CustomService = CustomService_1 = class CustomService {
+    constructor(prisma, loggerFactory) {
+        this.prisma = prisma;
+        this.logger = loggerFactory(CustomService_1.name);
+    }
+    getProductLineAndEquipment() {
+        return this.prisma.productLine.findMany({
+            where: {
+                isDeleted: false,
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+            include: {
+                equipment: {
+                    where: {
+                        isDeleted: false,
+                    },
+                    orderBy: {
+                        createdAt: 'desc',
+                    },
+                },
+            },
+        });
+    }
+};
+CustomService = CustomService_1 = tslib_1.__decorate([
+    (0, inversify_1.injectable)(),
+    tslib_1.__param(0, (0, inversify_1.inject)(flowda_shared_1.PrismaClientSymbol)),
+    tslib_1.__param(1, (0, inversify_1.inject)('Factory<Logger>')),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof db !== "undefined" && db.PrismaClient) === "function" ? _a : Object, Function])
+], CustomService);
+exports.CustomService = CustomService;
+
+
+/***/ }),
+
 /***/ "../../libs/wms-services/src/services/task.service.ts":
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -2342,11 +2460,13 @@ const prisma_wms_1 = __webpack_require__("../../libs/prisma-wms/src/index.ts");
 const schema = tslib_1.__importStar(__webpack_require__("../../libs/wms-services/src/lib/schema.ts"));
 const task_service_1 = __webpack_require__("../../libs/wms-services/src/services/task.service.ts");
 const user_service_1 = __webpack_require__("../../libs/wms-services/src/services/user.service.ts");
+const custom_service_1 = __webpack_require__("../../libs/wms-services/src/services/custom.service.ts");
 exports.wmsServiceModule = new inversify_1.ContainerModule((bind) => {
     bind(flowda_shared_1.PrismaZodSchemaSymbol).toConstantValue(prisma_wms_1.zt);
     bind(flowda_shared_1.CustomZodSchemaSymbol).toConstantValue(schema);
     (0, flowda_shared_1.bindService)(bind, flowda_shared_1.ServiceSymbol, task_service_1.TaskService);
     (0, flowda_shared_1.bindService)(bind, flowda_shared_1.ServiceSymbol, user_service_1.UserService);
+    (0, flowda_shared_1.bindService)(bind, flowda_shared_1.ServiceSymbol, custom_service_1.CustomService);
 });
 
 
