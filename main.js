@@ -876,6 +876,7 @@ const tslib_1 = __webpack_require__("tslib");
 const inversify_1 = __webpack_require__("inversify");
 const matchPath_1 = __webpack_require__("../../libs/flowda-shared/src/utils/matchPath.ts");
 const schema_service_1 = __webpack_require__("../../libs/flowda-shared/src/services/schema/schema.service.ts");
+const _ = tslib_1.__importStar(__webpack_require__("lodash"));
 let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
     constructor(schemaService, loggerFactory) {
         this.schemaService = schemaService;
@@ -921,26 +922,31 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
             };
         }
         else {
+            /*
+            [
+            {
+              type: { eq: 'UNSCHEDULE' },
+              status: { eq: 'DONE' },
+            },
+          ]
+            */
+            const filter = this.convertQueryToPrismaFilter(query);
             action = 'findMany';
             if (parsedPath.length > 1) {
                 // 情况1：根据前一个 resource id 搜索 list
                 const pResource = parsedPath[parsedPath.length - 2];
                 // this.logger.log(`${resource}.findMany`)
                 param = {
-                    where: {
-                        [`${pResource.resource}Id`]: pResource.id,
-                        isDeleted: false,
-                    },
+                    where: Object.assign({ [`${pResource.resource}Id`]: pResource.id, isDeleted: false }, filter),
                     orderBy: [{ createdAt: 'desc' }],
                     select: Object.assign(Object.assign({}, fields), include),
                 };
             }
             else {
                 param = {
-                    where: {
+                    where: Object.assign({ 
                         // todo: tenantId
-                        isDeleted: false,
-                    },
+                        isDeleted: false }, filter),
                     orderBy: [{ createdAt: 'desc' }],
                     select: Object.assign(Object.assign({}, fields), include),
                 };
@@ -954,6 +960,27 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
         this.logger.log(JSON.stringify(ret));
         this.logger.log('------------------------------------');
         return ret;
+    }
+    convertQueryToPrismaFilter(query) {
+        if (query.filter && Array.isArray(query.filter) && query.filter.length > 0) {
+            const raw = query.filter[0];
+            return Object.keys(raw).reduce((acc, cur) => {
+                // https://javascript.plainenglish.io/how-to-rename-object-keys-in-react-javascript-using-lodash-b73fb92ea24d
+                const item = _.mapKeys(raw[cur], (v, k) => {
+                    switch (k) {
+                        case 'eq':
+                            return 'equals';
+                        default:
+                            return;
+                    }
+                });
+                acc[cur] = item;
+                return acc;
+            }, {});
+        }
+        else {
+            return {};
+        }
     }
     toUpdateParam(pathname, values) {
         this.logger.log('------------------------------------');
