@@ -7,6 +7,7 @@ COPY pnpm-lock.yaml ./
 RUN pnpm fetch
 
 COPY .npmrc package.json ./
+COPY .yalc ./.yalc
 RUN pnpm install -r
 RUN pnpm prune --prod
 RUN wget https://gobinaries.com/tj/node-prune --output-document - | /bin/sh && node-prune
