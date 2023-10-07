@@ -1503,8 +1503,8 @@ const zod_1 = __webpack_require__("zod");
 exports.EquipmentScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'description', 'repairPlan', 'workStation', 'productLineId']);
 exports.IncomingInspectionRecordItemScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'result', 'inspectionIteration', 'incomingInspectionRecordId']);
 exports.IncomingInspectionRecordScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'note', 'result', 'receiptId', 'incomingInspectionSpecId']);
-exports.IncomingInspectionSpecItemScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'bubble', 'spec', 'incomingInspectionSpecId']);
-exports.IncomingInspectionSpecScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'version', 'partId']);
+exports.IncomingInspectionSpecItemScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'no', 'name', 'spec', 'incomingInspectionSpecId']);
+exports.IncomingInspectionSpecScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'version', 'attachment', 'partId']);
 exports.NonconformItemScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'partId', 'description', 'note']);
 exports.OperationInspectionRecordItemScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'inspectionIteration', 'partOperationInspectionItemId', 'operationInspectionRecordId']);
 exports.OperationInspectionRecordScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'note', 'workerOrderId', 'inspectorId', 'reviewerId']);
@@ -1669,6 +1669,7 @@ exports.IncomingInspectionSpecSchema = zod_1.z.object({
     updatedAt: zod_1.z.date(),
     isDeleted: zod_1.z.boolean(),
     version: zod_1.z.string().openapi({ "title": "版本号" }),
+    attachment: zod_1.z.string().openapi({ "title": "附件" }),
     partId: zod_1.z.number().int().openapi({ "reference": "Part" }),
 }).openapi({ "display_name": "进料检验规范", "display_column": "version" });
 exports.IncomingInspectionSpecWithRelationsSchema = exports.IncomingInspectionSpecSchema.merge(zod_1.z.object({
@@ -1684,11 +1685,11 @@ exports.IncomingInspectionSpecItemSchema = zod_1.z.object({
     createdAt: zod_1.z.date(),
     updatedAt: zod_1.z.date(),
     isDeleted: zod_1.z.boolean(),
+    no: zod_1.z.number().int().openapi({ "title": "序号" }),
     name: zod_1.z.string().openapi({ "title": "检验项目" }),
-    bubble: zod_1.z.string().openapi({ "title": "气泡图编号" }),
     spec: zod_1.z.string().openapi({ "title": "规格" }),
     incomingInspectionSpecId: zod_1.z.number().int().openapi({ "reference": "IncomingInspectionSpec" }),
-}).openapi({ "display_name": "检验项目", "display_column": "name" });
+}).openapi({ "display_name": "检验项目", "display_column": "name", "display_primary_key": "false" });
 exports.IncomingInspectionSpecItemWithRelationsSchema = exports.IncomingInspectionSpecItemSchema.merge(zod_1.z.object({
     incomingInspectionSpec: zod_1.z.lazy(() => exports.IncomingInspectionSpecWithRelationsSchema),
 }));
