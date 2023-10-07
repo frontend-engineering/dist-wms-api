@@ -38,6 +38,9 @@ let AppController = class AppController {
     getEquipment(req) {
         return this.custom.getEquipment(req.query);
     }
+    test() {
+        return this.custom.test();
+    }
 };
 tslib_1.__decorate([
     (0, common_1.Get)('/__hi'),
@@ -78,6 +81,12 @@ tslib_1.__decorate([
     tslib_1.__metadata("design:paramtypes", [typeof (_e = typeof express !== "undefined" && express.Request) === "function" ? _e : Object]),
     tslib_1.__metadata("design:returntype", void 0)
 ], AppController.prototype, "getEquipment", null);
+tslib_1.__decorate([
+    (0, common_1.Get)('/_test'),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", []),
+    tslib_1.__metadata("design:returntype", void 0)
+], AppController.prototype, "test", null);
 AppController = tslib_1.__decorate([
     (0, common_1.Controller)('/apps'),
     tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof flowda_shared_1.SchemaService !== "undefined" && flowda_shared_1.SchemaService) === "function" ? _a : Object, typeof (_b = typeof wms_services_1.UserService !== "undefined" && wms_services_1.UserService) === "function" ? _b : Object, typeof (_c = typeof wms_services_1.CustomService !== "undefined" && wms_services_1.CustomService) === "function" ? _c : Object])
@@ -898,6 +907,7 @@ const inversify_1 = __webpack_require__("inversify");
 const matchPath_1 = __webpack_require__("../../libs/flowda-shared/src/utils/matchPath.ts");
 const schema_service_1 = __webpack_require__("../../libs/flowda-shared/src/services/schema/schema.service.ts");
 const _ = tslib_1.__importStar(__webpack_require__("lodash"));
+const seperate = _.repeat('-', 50);
 let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
     constructor(schemaService, loggerFactory) {
         this.schemaService = schemaService;
@@ -913,12 +923,14 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
         if (!query.fields) {
             throw new Error('No query fields');
         }
-        this.logger.log('------------------------------------');
+        this.logger.log(seperate);
         this.logger.log(`pathname: ${pathname}, query: ${JSON.stringify(query)}`);
         const parsedPath = (0, matchPath_1.matchPath)(pathname);
         if (parsedPath.length === 0)
             return {};
-        const { resource, id } = parsedPath[parsedPath.length - 1];
+        const { resource, id, resourceSchema } = parsedPath[parsedPath.length - 1];
+        const schemaCache = this.schemaService.getSchemaCache();
+        const theResourceSchema = schemaCache[resourceSchema];
         let action;
         let param = {};
         const queryFields = query.fields;
@@ -926,10 +938,55 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
         const include = {};
         if (typeof query.include === 'string' && query.include !== '') {
             query.include.split(',').forEach((inc) => {
+                // this.logger.log(`[toFindParam] parse include ${inc}`)
+                const refSelect = {};
+                if (theResourceSchema && theResourceSchema.columns) {
+                    // e.g. inc partVersion
+                    const refColumn = theResourceSchema.columns.find(col => col.column_type === 'reference' && col.reference['x-relationField'] === inc);
+                    if (refColumn) {
+                        // e.g. model_name PartVersion
+                        // e.g. display_column partId,version
+                        const { model_name, display_column } = refColumn.reference;
+                        // e.g. PartVersionResourceSchema
+                        const refSchema = schemaCache[model_name + 'ResourceSchema'];
+                        let displayCols = [];
+                        if (typeof display_column === 'string') {
+                            displayCols = [display_column];
+                        }
+                        else {
+                            displayCols = display_column;
+                        }
+                        displayCols.forEach(item => {
+                            // e.g. item partId
+                            const disCol = refSchema.columns.find(col => col.name === item);
+                            if (disCol.column_type === 'reference') {
+                                // e.g. name
+                                const display_column = disCol.reference.display_column;
+                                const relationField = disCol.reference['x-relationField'];
+                                // todo: 这里手动处理下，不处理嵌套了，仅取最后一个
+                                // todo: 估计得要保证 display_column，比如增加一个 fallback_display_column，不要搞太复杂的递归
+                                let display_column2;
+                                if (Array.isArray(display_column)) {
+                                    display_column2 = display_column[display_column.length - 1];
+                                }
+                                else {
+                                    display_column2 = display_column;
+                                }
+                                refSelect[relationField] = {
+                                    select: {
+                                        id: true,
+                                        [display_column2]: true,
+                                    },
+                                };
+                            }
+                        });
+                    }
+                }
+                const selectRet = this.toPrismaSelect(queryFields[inc]);
                 include[inc] = {
                     // todo: 似乎 prisma nest select 不支持 order by 只有 include 支持，但是 include 不支持 nest select fields
                     // orderBy: [{ createdAt: 'desc' }],
-                    select: this.toPrismaSelect(queryFields[inc]),
+                    select: Object.assign(Object.assign({}, selectRet), refSelect),
                 };
             });
         }
@@ -979,7 +1036,7 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
             resource,
         };
         this.logger.log(JSON.stringify(ret));
-        this.logger.log('------------------------------------');
+        this.logger.log(seperate);
         return ret;
     }
     convertQueryToPrismaFilter(query) {
@@ -1004,7 +1061,7 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
         }
     }
     toUpdateParam(pathname, values) {
-        this.logger.log('------------------------------------');
+        this.logger.log(seperate);
         this.logger.log(`pathname: ${pathname}, body: ${JSON.stringify(values)}`);
         const matchRet = (0, matchPath_1.matchPath)(pathname);
         const { resource, id, resourceSchema } = matchRet[matchRet.length - 1];
@@ -1017,7 +1074,7 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
             },
         };
         this.logger.log(JSON.stringify(ret));
-        this.logger.log('------------------------------------');
+        this.logger.log(seperate);
         return ret;
     }
     removeRelationFields(resourceSchema, values) {
@@ -2304,6 +2361,52 @@ let CustomService = CustomService_1 = class CustomService {
             });
             data.status = _.some(records, item => item.status !== db.RepairRecordStatus.DONE) ? '不可用' : '可用';
             return data;
+        });
+    }
+    test() {
+        return this.prisma.receipt.findUnique({
+            where: { id: 1 },
+            select: {
+                id: true,
+                createdAt: true,
+                updatedAt: true,
+                lot: true,
+                partVersionId: true,
+                incomingInspectionRecord: {
+                    select: {
+                        result: true,
+                        id: true,
+                        createdAt: true,
+                        updatedAt: true,
+                        note: true,
+                        receiptId: true,
+                        receipt: {
+                            select: {
+                                id: true,
+                                lot: true,
+                            },
+                        },
+                        incomingInspectionSpecId: true,
+                    },
+                },
+                partVersion: {
+                    select: {
+                        id: true,
+                        createdAt: true,
+                        updatedAt: true,
+                        version: true,
+                        note: true,
+                        partId: true,
+                        part: {
+                            select: {
+                                id: true,
+                                name: true,
+                            },
+                        },
+                        incomingInspectionSpec: true,
+                    },
+                },
+            },
         });
     }
 };
