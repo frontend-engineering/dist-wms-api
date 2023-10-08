@@ -939,49 +939,7 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
         if (typeof query.include === 'string' && query.include !== '') {
             query.include.split(',').forEach((inc) => {
                 // this.logger.log(`[toFindParam] parse include ${inc}`)
-                const refSelect = {};
-                if (theResourceSchema && theResourceSchema.columns) {
-                    // e.g. inc partVersion
-                    const refColumn = theResourceSchema.columns.find(col => col.column_type === 'reference' && col.reference['x-relationField'] === inc);
-                    if (refColumn) {
-                        // e.g. model_name PartVersion
-                        // e.g. display_column partId,version
-                        const { model_name, display_column } = refColumn.reference;
-                        // e.g. PartVersionResourceSchema
-                        const refSchema = schemaCache[model_name + 'ResourceSchema'];
-                        let displayCols = [];
-                        if (typeof display_column === 'string') {
-                            displayCols = [display_column];
-                        }
-                        else {
-                            displayCols = display_column;
-                        }
-                        displayCols.forEach(item => {
-                            // e.g. item partId
-                            const disCol = refSchema.columns.find(col => col.name === item);
-                            if (disCol.column_type === 'reference') {
-                                // e.g. name
-                                const display_column = disCol.reference.display_column;
-                                const relationField = disCol.reference['x-relationField'];
-                                // todo: 这里手动处理下，不处理嵌套了，仅取最后一个
-                                // todo: 估计得要保证 display_column，比如增加一个 fallback_display_column，不要搞太复杂的递归
-                                let display_column2;
-                                if (Array.isArray(display_column)) {
-                                    display_column2 = display_column[display_column.length - 1];
-                                }
-                                else {
-                                    display_column2 = display_column;
-                                }
-                                refSelect[relationField] = {
-                                    select: {
-                                        id: true,
-                                        [display_column2]: true,
-                                    },
-                                };
-                            }
-                        });
-                    }
-                }
+                const refSelect = this.getRefSelect(theResourceSchema, inc);
                 const selectRet = this.toPrismaSelect(queryFields[inc]);
                 include[inc] = {
                     // todo: 似乎 prisma nest select 不支持 order by 只有 include 支持，但是 include 不支持 nest select fields
@@ -1038,6 +996,61 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
         this.logger.log(JSON.stringify(ret));
         this.logger.log(seperate);
         return ret;
+    }
+    /**
+     * 根据 resource 的 schema 中 columns 是 ref， e.g. resource(Receipt) 收货单关联的 ref(partVersion)
+     * 找到对应 refSchema 的 display_column 中的又 include e.g. display_column(partId)，得到 nest select
+     * { [include: partVersion]: { select { partId: true, [partId x-relationField: part]: { select: { id: true, [display_column*]: true} }}} }
+     * 注意 display_column* 则临时只取了最后一个
+     * @param resourceSchema
+     * @param includeRef
+     */
+    getRefSelect(resourceSchema, includeRef) {
+        const refSelect = {};
+        const schemaCache = this.schemaService.getSchemaCache();
+        if (resourceSchema && resourceSchema.columns) {
+            // e.g. inc partVersion
+            const refColumn = resourceSchema.columns.find(col => col.column_type === 'reference' && col.reference['x-relationField'] === includeRef);
+            if (refColumn) {
+                // e.g. model_name PartVersion
+                // e.g. display_column partId,version
+                const { model_name, display_column } = refColumn.reference;
+                // e.g. PartVersionResourceSchema
+                const refSchema = schemaCache[model_name + 'ResourceSchema'];
+                let displayCols = [];
+                if (typeof display_column === 'string') {
+                    displayCols = [display_column];
+                }
+                else {
+                    displayCols = display_column;
+                }
+                displayCols.forEach(item => {
+                    // e.g. item partId
+                    const disCol = refSchema.columns.find(col => col.name === item);
+                    if (disCol.column_type === 'reference') {
+                        // e.g. name
+                        const display_column = disCol.reference.display_column;
+                        const relationField = disCol.reference['x-relationField'];
+                        // todo: 这里手动处理下，不处理嵌套了，仅取最后一个
+                        // todo: 估计得要保证 display_column，比如增加一个 fallback_display_column，不要搞太复杂的递归
+                        let display_column2;
+                        if (Array.isArray(display_column)) {
+                            display_column2 = display_column[display_column.length - 1];
+                        }
+                        else {
+                            display_column2 = display_column;
+                        }
+                        refSelect[relationField] = {
+                            select: {
+                                id: true,
+                                [display_column2]: true,
+                            },
+                        };
+                    }
+                });
+            }
+        }
+        return refSelect;
     }
     convertQueryToPrismaFilter(query) {
         if (query.filter && Array.isArray(query.filter) && query.filter.length > 0) {
