@@ -1002,6 +1002,8 @@ let PrismaSchemaService = PrismaSchemaService_1 = class PrismaSchemaService {
      * 找到对应 refSchema 的 display_column 中的又 include e.g. display_column(partId)，得到 nest select
      * { [include: partVersion]: { select { partId: true, [partId x-relationField: part]: { select: { id: true, [display_column*]: true} }}} }
      * 注意 display_column* 则临时只取了最后一个
+     *
+     * todo: 现在是根据 display_column 里如果有 ref 来计算的，后续可以改成所有 ref 都默认向下搜索一层
      * @param resourceSchema
      * @param includeRef
      */
