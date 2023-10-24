@@ -2770,6 +2770,17 @@ let CustomService = CustomService_1 = class CustomService {
     }
     createOperationInspectionRecord(opt) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            const woRet0 = yield this.prisma.workerOrder.findFirst({
+                where: {
+                    id: opt.workerOrderId,
+                },
+                include: {
+                    operationInspectionRecords: true,
+                },
+            });
+            if (woRet0 && woRet0.operationInspectionRecords.length > 0) {
+                throw new Error(`工单 ${woRet0.no} 已有过程检记录`);
+            }
             const woRet = yield this.prisma.workerOrder.findUnique({
                 where: {
                     id: opt.workerOrderId,
