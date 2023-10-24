@@ -1900,17 +1900,17 @@ const zod_1 = __webpack_require__("zod");
 /////////////////////////////////////////
 exports.EquipmentScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'description', 'repairPlan', 'workStation', 'productLineId']);
 exports.IncomingInspectionRecordItemScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'incomingInspectionRecordId', 'incomingInspectionSpecItemId', 'inspectionIteration', 'result']);
-exports.IncomingInspectionRecordScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'note', 'result', 'receiptId', 'incomingInspectionSpecId']);
+exports.IncomingInspectionRecordScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'receiptId', 'result', 'incomingInspectionSpecId', 'note']);
 exports.IncomingInspectionSpecItemScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'no', 'name', 'spec', 'incomingInspectionSpecId']);
 exports.IncomingInspectionSpecScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'version', 'partVersionId']);
 exports.NonconformItemScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'partId', 'description', 'note']);
 exports.OperationInspectionRecordItemScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'partOperationInspectionItemId', 'operationInspectionRecordId', 'inspectionIteration1', 'inspectionIteration2', 'inspectionIteration3', 'inspectionIteration4']);
-exports.OperationInspectionRecordScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'note', 'workerOrderId', 'partOperationVersionId']);
+exports.OperationInspectionRecordScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'workerOrderId', 'partOperationVersionId', 'note']);
 exports.PartOperationInspectionItemScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'partOperationVersionId']);
 exports.PartOperationScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'no', 'partId']);
 exports.PartOperationVersionScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'version', 'name', 'partOperationId']);
 exports.PartScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'no', 'name', 'partType']);
-exports.PartVersionScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'version', 'note', 'partId']);
+exports.PartVersionScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'version', 'partId', 'note']);
 exports.ProductLineScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'description']);
 exports.ReceiptScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'partVersionId', 'lot']);
 exports.RepairMaterialInventoryScalarFieldEnumSchema = zod_1.z.enum(['id', 'createdAt', 'updatedAt', 'isDeleted', 'name', 'description', 'quantity', 'minimumQuantity', 'equipmentId']);
@@ -2030,10 +2030,10 @@ exports.RepairMaterialInventorySchema = zod_1.z.object({
     description: zod_1.z.string().openapi({ "title": "物料描述", "column_type": "textarea" }),
     quantity: zod_1.z.number().int().openapi({ "title": "库存数量" }),
     minimumQuantity: zod_1.z.number().int().openapi({ "title": "最小库存数量" }),
-    equipmentId: zod_1.z.number().int().openapi({ "reference": "Equipment" }),
+    equipmentId: zod_1.z.number().int().nullable().openapi({ "reference": "Equipment" }),
 }).openapi({ "primary_key": "id", "display_name": "备品备料库存", "display_column": "name" });
 exports.RepairMaterialInventoryWithRelationsSchema = exports.RepairMaterialInventorySchema.merge(zod_1.z.object({
-    equipment: zod_1.z.lazy(() => exports.EquipmentWithRelationsSchema),
+    equipment: zod_1.z.lazy(() => exports.EquipmentWithRelationsSchema).nullable(),
 }));
 /////////////////////////////////////////
 // REPAIR RECORD SCHEMA
@@ -2081,8 +2081,8 @@ exports.PartVersionSchema = zod_1.z.object({
     updatedAt: zod_1.z.date(),
     isDeleted: zod_1.z.boolean(),
     version: zod_1.z.string().openapi({ "title": "版本号" }),
-    note: zod_1.z.string().nullable().openapi({ "title": "备注" }),
     partId: zod_1.z.number().int().openapi({ "reference": "Part" }),
+    note: zod_1.z.string().nullable().openapi({ "title": "备注" }),
 }).openapi({ "display_name": "零件版本", "display_column": "partId,version" });
 exports.PartVersionWithRelationsSchema = exports.PartVersionSchema.merge(zod_1.z.object({
     part: zod_1.z.lazy(() => exports.PartWithRelationsSchema),
@@ -2166,7 +2166,7 @@ exports.PartOperationVersionSchema = zod_1.z.object({
     version: zod_1.z.number().int().openapi({ "title": "版本号" }),
     name: zod_1.z.string().openapi({ "title": "工序名称" }),
     partOperationId: zod_1.z.number().int().openapi({ "reference": "PartOperation" }),
-}).openapi({ "display_name": "总成工序版本", "display_column": "name,version" });
+}).openapi({ "display_name": "总成工序版本", "display_column": "partOperationId,name,version" });
 exports.PartOperationVersionWithRelationsSchema = exports.PartOperationVersionSchema.merge(zod_1.z.object({
     partOperation: zod_1.z.lazy(() => exports.PartOperationWithRelationsSchema),
     partOperationInspectionItems: zod_1.z.lazy(() => exports.PartOperationInspectionItemWithRelationsSchema).array().openapi({ "model_name": "PartOperationInspectionItem" }),
@@ -2211,12 +2211,12 @@ exports.IncomingInspectionRecordSchema = zod_1.z.object({
     createdAt: zod_1.z.date(),
     updatedAt: zod_1.z.date(),
     isDeleted: zod_1.z.boolean(),
-    note: zod_1.z.string().nullable().openapi({ "title": "备注" }),
     /**
      * @schema.x-unique true
      */
     receiptId: zod_1.z.number().int().openapi({ "reference": "Receipt", "x-unique": "true" }),
     incomingInspectionSpecId: zod_1.z.number().int().openapi({ "reference": "IncomingInspectionSpec" }),
+    note: zod_1.z.string().nullable().openapi({ "title": "备注" }),
 }).openapi({ "display_name": "进料检记录", "display_column": "receiptId" });
 exports.IncomingInspectionRecordWithRelationsSchema = exports.IncomingInspectionRecordSchema.merge(zod_1.z.object({
     receipt: zod_1.z.lazy(() => exports.ReceiptWithRelationsSchema),
@@ -2265,9 +2265,9 @@ exports.OperationInspectionRecordSchema = zod_1.z.object({
     createdAt: zod_1.z.date(),
     updatedAt: zod_1.z.date(),
     isDeleted: zod_1.z.boolean(),
-    note: zod_1.z.string().nullable().openapi({ "title": "备注" }),
     workerOrderId: zod_1.z.number().int().openapi({ "reference": "WorkerOrder" }),
     partOperationVersionId: zod_1.z.number().int().openapi({ "reference": "PartOperationVersion" }),
+    note: zod_1.z.string().nullable().openapi({ "title": "备注" }),
 }).openapi({ "display_name": "过程检", "display_column": "workerOrderId" });
 exports.OperationInspectionRecordWithRelationsSchema = exports.OperationInspectionRecordSchema.merge(zod_1.z.object({
     workerOrder: zod_1.z.lazy(() => exports.WorkerOrderWithRelationsSchema),
