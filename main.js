@@ -15,6 +15,7 @@ const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.
 const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
 const express = tslib_1.__importStar(__webpack_require__("express"));
 const flowda_shared_node_1 = __webpack_require__("../../libs/flowda-shared-node/src/index.ts");
+const prisma_wms_1 = __webpack_require__("../../libs/prisma-wms/src/index.ts");
 let AppController = class AppController {
     constructor(schema, user, custom, tableFilter) {
         this.schema = schema;
@@ -26,7 +27,7 @@ let AppController = class AppController {
         return { hi: 'world' };
     }
     getSchema() {
-        return this.schema.getSchema();
+        return this.schema.getSchema(wms_services_1.schema, prisma_wms_1.zt);
     }
     findByUsername(username) {
         return this.user.findByUsername(username);
@@ -796,9 +797,10 @@ exports.flowdaSharedModule = new inversify_1.ContainerModule((bind) => {
     bind(prismaSchema_service_1.PrismaSchemaService).toSelf().inSingletonScope();
     bind(schemaTransformer_1.SchemaTransformer).toSelf().inTransientScope();
     bind('Factory<SchemaTransformer>').toFactory(context => {
-        return (z) => {
+        return (z, prismaZod) => {
             const transformer = context.container.get(schemaTransformer_1.SchemaTransformer);
             transformer.setZodType(z);
+            transformer.setPrismaZod(prismaZod);
             return transformer;
         };
     });
@@ -843,7 +845,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CustomError = exports.CustomZodSchemaSymbol = exports.PrismaZodSchemaSymbol = exports.URLSymbol = exports.APISymbol = exports.ServiceSymbol = exports.PrismaClientSymbol = void 0;
+exports.CustomError = exports.URLSymbol = exports.APISymbol = exports.ServiceSymbol = exports.PrismaClientSymbol = void 0;
 exports.PrismaClientSymbol = Symbol('PrismaClient');
 /**
  * getServices 方法会将 inversify module 转换成 nestjs module，这样 nestjs controller 就可以使用了
@@ -852,8 +854,6 @@ exports.PrismaClientSymbol = Symbol('PrismaClient');
 exports.ServiceSymbol = Symbol('Service');
 exports.APISymbol = Symbol('API');
 exports.URLSymbol = Symbol.for('URL');
-exports.PrismaZodSchemaSymbol = Symbol.for('PrismaZodSchema');
-exports.CustomZodSchemaSymbol = Symbol.for('CustomZodSchema');
 class CustomError extends Error {
     constructor(code, message, extra) {
         super(JSON.stringify({ code: code, message }));
@@ -1441,24 +1441,23 @@ exports.PrismaSchemaService = PrismaSchemaService;
 
 
 var SchemaService_1;
+var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SchemaService = void 0;
 const tslib_1 = __webpack_require__("tslib");
 const inversify_1 = __webpack_require__("inversify");
-const types_1 = __webpack_require__("../../libs/flowda-shared/src/interfaces/types.ts");
+const flowdaShared_module_1 = __webpack_require__("../../libs/flowda-shared/src/flowdaShared.module.ts");
 let SchemaService = SchemaService_1 = class SchemaService {
-    constructor(loggerFactory, modelSchemaFactory, zt, czt) {
+    constructor(loggerFactory, modelSchemaFactory) {
         this.modelSchemaFactory = modelSchemaFactory;
-        this.zt = zt;
-        this.czt = czt;
         this.logger = loggerFactory(SchemaService_1.name);
     }
-    getSchema() {
+    getSchema(customZodSchema, prismaZodSchema) {
         console.time('generate schema');
-        const schema = Object.keys(this.czt).reduce((acc, k) => {
-            const e = this.czt[k];
+        const schema = Object.keys(customZodSchema).reduce((acc, k) => {
+            const e = customZodSchema[k];
             if (['ZodObject'].indexOf(e.constructor.name) > -1) {
-                const transformer = this.modelSchemaFactory(e);
+                const transformer = this.modelSchemaFactory(e, prismaZodSchema);
                 acc[k] = transformer.buildSchema(k).toSchema();
             }
             else {
@@ -1481,9 +1480,7 @@ SchemaService = SchemaService_1 = tslib_1.__decorate([
     (0, inversify_1.injectable)(),
     tslib_1.__param(0, (0, inversify_1.inject)('Factory<Logger>')),
     tslib_1.__param(1, (0, inversify_1.inject)('Factory<SchemaTransformer>')),
-    tslib_1.__param(2, (0, inversify_1.inject)(types_1.PrismaZodSchemaSymbol)),
-    tslib_1.__param(3, (0, inversify_1.inject)(types_1.CustomZodSchemaSymbol)),
-    tslib_1.__metadata("design:paramtypes", [Function, Function, Object, Object])
+    tslib_1.__metadata("design:paramtypes", [Function, typeof (_a = typeof flowdaShared_module_1.TSchemaTransformerFactory !== "undefined" && flowdaShared_module_1.TSchemaTransformerFactory) === "function" ? _a : Object])
 ], SchemaService);
 exports.SchemaService = SchemaService;
 
@@ -1502,16 +1499,17 @@ const zod_1 = __webpack_require__("zod");
 const inversify_1 = __webpack_require__("inversify");
 const zod_openapi_1 = __webpack_require__("@anatine/zod-openapi");
 const _ = tslib_1.__importStar(__webpack_require__("lodash"));
-const types_1 = __webpack_require__("../../libs/flowda-shared/src/interfaces/types.ts");
 const matchPath_1 = __webpack_require__("../../libs/flowda-shared/src/utils/matchPath.ts");
 exports.SUFFIX = 'ResourceSchema';
 let SchemaTransformer = SchemaTransformer_1 = class SchemaTransformer {
-    constructor(loggerFactory, prismaZod) {
-        this.prismaZod = prismaZod;
+    constructor(loggerFactory) {
         this.modelLevelSchema = {};
         this.associations = [];
         this.columns = [];
         this.logger = loggerFactory(SchemaTransformer_1.name);
+    }
+    setPrismaZod(z) {
+        this.prismaZod = z;
     }
     setZodType(z) {
         this.zodType = z;
@@ -1602,6 +1600,9 @@ let SchemaTransformer = SchemaTransformer_1 = class SchemaTransformer {
         const jsProp = this.jsonSchema.properties[k];
         // console.log(jsProp)
         const t = jsProp.reference + 'Schema';
+        if (this.prismaZod == null) {
+            throw new Error('prismaZod is not initialized');
+        }
         const ref = (0, zod_openapi_1.generateSchema)(this.prismaZod[t]);
         const { primary_key, display_name, display_column } = ref;
         const ret = {
@@ -1746,8 +1747,7 @@ let SchemaTransformer = SchemaTransformer_1 = class SchemaTransformer {
 SchemaTransformer = SchemaTransformer_1 = tslib_1.__decorate([
     (0, inversify_1.injectable)(),
     tslib_1.__param(0, (0, inversify_1.inject)('Factory<Logger>')),
-    tslib_1.__param(1, (0, inversify_1.inject)(types_1.PrismaZodSchemaSymbol)),
-    tslib_1.__metadata("design:paramtypes", [Function, Object])
+    tslib_1.__metadata("design:paramtypes", [Function])
 ], SchemaTransformer);
 exports.SchemaTransformer = SchemaTransformer;
 
@@ -2321,6 +2321,7 @@ exports.OperationInspectionRecordItemWithRelationsSchema = exports.OperationInsp
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.schema = void 0;
 const tslib_1 = __webpack_require__("tslib");
 const zod_openapi_1 = __webpack_require__("@anatine/zod-openapi");
 const zod_1 = __webpack_require__("zod");
@@ -2331,6 +2332,7 @@ tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/lib/wms-en
 tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/services/task.service.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/services/user.service.ts"), exports);
 tslib_1.__exportStar(__webpack_require__("../../libs/wms-services/src/services/custom.service.ts"), exports);
+exports.schema = tslib_1.__importStar(__webpack_require__("../../libs/wms-services/src/lib/schema.ts"));
 
 
 /***/ }),
@@ -3152,17 +3154,12 @@ exports.UserService = UserService;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.wmsServiceModule = void 0;
-const tslib_1 = __webpack_require__("tslib");
 const inversify_1 = __webpack_require__("inversify");
 const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
-const prisma_wms_1 = __webpack_require__("../../libs/prisma-wms/src/index.ts");
-const schema = tslib_1.__importStar(__webpack_require__("../../libs/wms-services/src/lib/schema.ts"));
 const task_service_1 = __webpack_require__("../../libs/wms-services/src/services/task.service.ts");
 const user_service_1 = __webpack_require__("../../libs/wms-services/src/services/user.service.ts");
 const custom_service_1 = __webpack_require__("../../libs/wms-services/src/services/custom.service.ts");
 exports.wmsServiceModule = new inversify_1.ContainerModule((bind) => {
-    bind(flowda_shared_1.PrismaZodSchemaSymbol).toConstantValue(prisma_wms_1.zt);
-    bind(flowda_shared_1.CustomZodSchemaSymbol).toConstantValue(schema);
     (0, flowda_shared_1.bindService)(bind, flowda_shared_1.ServiceSymbol, task_service_1.TaskService);
     (0, flowda_shared_1.bindService)(bind, flowda_shared_1.ServiceSymbol, user_service_1.UserService);
     (0, flowda_shared_1.bindService)(bind, flowda_shared_1.ServiceSymbol, custom_service_1.CustomService);
