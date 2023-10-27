@@ -59,6 +59,9 @@ let AppController = class AppController {
     createOperationInspectionRecord(dto) {
         return this.custom.createOperationInspectionRecord(dto);
     }
+    updateEquipmentCron() {
+        return this.custom.createTomorrowEquipmentRepairPlan();
+    }
 };
 tslib_1.__decorate([
     (0, common_1.Get)('/__hi'),
@@ -140,6 +143,12 @@ tslib_1.__decorate([
     tslib_1.__metadata("design:paramtypes", [typeof (_l = typeof wms_services_1.CreateOperationInspectionRecordSchemaDto !== "undefined" && wms_services_1.CreateOperationInspectionRecordSchemaDto) === "function" ? _l : Object]),
     tslib_1.__metadata("design:returntype", void 0)
 ], AppController.prototype, "createOperationInspectionRecord", null);
+tslib_1.__decorate([
+    (0, common_1.Post)('/createTomorrowEquipmentRepairPlan'),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", []),
+    tslib_1.__metadata("design:returntype", void 0)
+], AppController.prototype, "updateEquipmentCron", null);
 AppController = tslib_1.__decorate([
     (0, common_1.Controller)('/apps'),
     tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof flowda_shared_1.SchemaService !== "undefined" && flowda_shared_1.SchemaService) === "function" ? _a : Object, typeof (_b = typeof wms_services_1.UserService !== "undefined" && wms_services_1.UserService) === "function" ? _b : Object, typeof (_c = typeof wms_services_1.CustomService !== "undefined" && wms_services_1.CustomService) === "function" ? _c : Object, typeof (_d = typeof flowda_shared_node_1.TableFilterService !== "undefined" && flowda_shared_node_1.TableFilterService) === "function" ? _d : Object])
@@ -167,11 +176,13 @@ const userLocal_strategy_1 = __webpack_require__("./src/user/userLocal.strategy.
 const userJwt_strategy_1 = __webpack_require__("./src/user/userJwt.strategy.ts");
 const process_controller_1 = __webpack_require__("./src/app/process.controller.ts");
 const data_controller_1 = __webpack_require__("./src/app/data.controller.ts");
+const schedule_1 = __webpack_require__("@nestjs/schedule");
+const tasks_module_1 = __webpack_require__("./src/app/tasks.module.ts");
 let AppModule = class AppModule {
 };
 AppModule = tslib_1.__decorate([
     (0, common_1.Module)({
-        imports: [services_module_1.ServicesModule],
+        imports: [services_module_1.ServicesModule, schedule_1.ScheduleModule.forRoot(), tasks_module_1.TasksModule],
         controllers: [app_controller_1.AppController, data_controller_1.DataController, task_controller_1.TaskController, user_controller_1.UserController, process_controller_1.ProcessController],
         providers: [
             {
@@ -361,12 +372,72 @@ exports.TaskController = TaskController;
 
 /***/ }),
 
+/***/ "./src/app/tasks.module.ts":
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TasksModule = void 0;
+const tslib_1 = __webpack_require__("tslib");
+const common_1 = __webpack_require__("@nestjs/common");
+const tasks_service_1 = __webpack_require__("./src/app/tasks.service.ts");
+let TasksModule = class TasksModule {
+};
+TasksModule = tslib_1.__decorate([
+    (0, common_1.Module)({
+        providers: [tasks_service_1.TasksService],
+    })
+], TasksModule);
+exports.TasksModule = TasksModule;
+
+
+/***/ }),
+
+/***/ "./src/app/tasks.service.ts":
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+var TasksService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TasksService = void 0;
+const tslib_1 = __webpack_require__("tslib");
+const common_1 = __webpack_require__("@nestjs/common");
+const schedule_1 = __webpack_require__("@nestjs/schedule");
+const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
+let TasksService = TasksService_1 = class TasksService {
+    constructor(customService) {
+        this.customService = customService;
+        this.logger = new common_1.Logger(TasksService_1.name);
+    }
+    handleCron() {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            this.logger.debug('Called createTomorrowEquipmentRepairPlan');
+            yield this.customService.createTomorrowEquipmentRepairPlan();
+        });
+    }
+};
+tslib_1.__decorate([
+    (0, schedule_1.Cron)('30 17 * * *'),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", []),
+    tslib_1.__metadata("design:returntype", Promise)
+], TasksService.prototype, "handleCron", null);
+TasksService = TasksService_1 = tslib_1.__decorate([
+    (0, common_1.Injectable)(),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof wms_services_1.CustomService !== "undefined" && wms_services_1.CustomService) === "function" ? _a : Object])
+], TasksService);
+exports.TasksService = TasksService;
+
+
+/***/ }),
+
 /***/ "./src/loadModule.ts":
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.loadModule = void 0;
+exports.loadModule = exports.setNestApp = void 0;
 const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
 const client_wms_1 = __webpack_require__("@prisma/client-wms");
 const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
@@ -374,7 +445,16 @@ const flowda_shared_node_1 = __webpack_require__("../../libs/flowda-shared-node/
 const prisma = new client_wms_1.PrismaClient({
     log: ['query', 'info', 'warn', 'error'],
 });
+let nestApp = null;
+function setNestApp(nestAppParam) {
+    console.log('[bootstrap] setNestApp');
+    nestApp = nestAppParam;
+}
+exports.setNestApp = setNestApp;
 function loadModule(container) {
+    container.bind('Factory<INestApplication>').toFactory(context => {
+        return () => nestApp;
+    });
     container.bind(flowda_shared_1.PrismaClientSymbol).toConstantValue(prisma);
     container.load(flowda_shared_1.flowdaSharedModule);
     container.load(flowda_shared_node_1.flowdaSharedNodeModule);
@@ -2671,7 +2751,7 @@ exports.WMS_ENV = (0, znv_1.parseEnv)(process.env, {
 var CustomService_1;
 var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CustomService = exports.CreateOperationInspectionRecordSchemaDto = exports.CreateIncomingInspectionRecordSchemaDto = void 0;
+exports.CustomService = exports.UpdateEquipmentCronSchemaDto = exports.CreateOperationInspectionRecordSchemaDto = exports.CreateIncomingInspectionRecordSchemaDto = void 0;
 const tslib_1 = __webpack_require__("tslib");
 const inversify_1 = __webpack_require__("inversify");
 const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
@@ -2679,6 +2759,10 @@ const db = tslib_1.__importStar(__webpack_require__("@prisma/client-wms"));
 const _ = tslib_1.__importStar(__webpack_require__("lodash"));
 const nestjs_zod_1 = __webpack_require__("nestjs-zod");
 const zod_1 = __webpack_require__("zod");
+const cronParser = tslib_1.__importStar(__webpack_require__("cron-parser"));
+const dayjs_1 = tslib_1.__importDefault(__webpack_require__("dayjs"));
+const cronstrue_1 = tslib_1.__importDefault(__webpack_require__("cronstrue"));
+__webpack_require__("cronstrue/locales/zh_CN");
 const CreateIncomingInspectionRecordSchema = zod_1.z.object({
     incomingInspectionSpecId: zod_1.z.number(),
     receiptId: zod_1.z.number(),
@@ -2694,10 +2778,19 @@ exports.CreateIncomingInspectionRecordSchemaDto = CreateIncomingInspectionRecord
 class CreateOperationInspectionRecordSchemaDto extends (0, nestjs_zod_1.createZodDto)(CreateOperationInspectionRecordSchema) {
 }
 exports.CreateOperationInspectionRecordSchemaDto = CreateOperationInspectionRecordSchemaDto;
+const UpdateEquipmentCronSchema = zod_1.z.object({
+    equipmentId: zod_1.z.number(),
+    repairPlan: zod_1.z.string(),
+});
+class UpdateEquipmentCronSchemaDto extends (0, nestjs_zod_1.createZodDto)(UpdateEquipmentCronSchema) {
+}
+exports.UpdateEquipmentCronSchemaDto = UpdateEquipmentCronSchemaDto;
+const EQUIPMENT_REPAIR_PLAN_PREFIX = 'EquipmentRepairPlan-';
 let CustomService = CustomService_1 = class CustomService {
-    constructor(prisma, data, loggerFactory) {
+    constructor(prisma, data, nestAppFactory, loggerFactory) {
         this.prisma = prisma;
         this.data = data;
+        this.nestAppFactory = nestAppFactory;
         this.logger = loggerFactory(CustomService_1.name);
     }
     getProductLineAndEquipment() {
@@ -2857,6 +2950,67 @@ let CustomService = CustomService_1 = class CustomService {
             return {};
         });
     }
+    /*
+    就看明天的，创建了就创建了
+     */
+    createTomorrowEquipmentRepairPlan() {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            const ret = yield this.prisma.equipment.findMany({
+                where: {
+                    isDeleted: false,
+                },
+            });
+            const tomorrow = (0, dayjs_1.default)().add(1, 'day').date();
+            const tomorrowRet = ret
+                .filter(item => {
+                const interval = cronParser.parseExpression(item.repairPlan);
+                const next = interval.next().getDate();
+                return next === tomorrow;
+            })
+                .map(item => {
+                const desc = cronstrue_1.default.toString(item.repairPlan, { locale: 'zh_CN' });
+                return {
+                    type: db.RepairType.SCHEDULE,
+                    status: db.RepairRecordStatus.TO_ASSIGN,
+                    description: '定期维护：' + desc,
+                    equipmentId: item.id,
+                };
+            });
+            const cnt = yield this.prisma.repairRecord.createMany({
+                data: tomorrowRet,
+            });
+            return {
+                count: cnt,
+                equipmentIds: tomorrowRet.map(item => item.equipmentId),
+            };
+        });
+    }
+    // 不能这么搞，重启之后就丢了
+    // async updateEquipmentCron(dto: UpdateEquipmentCronSchemaDto) {
+    //   this.logger.log('updateEquipmentCron, params:' + JSON.stringify(dto))
+    //   const schedulerRegistry = this.nestAppFactory().get<SchedulerRegistry>(SchedulerRegistry)
+    //   const name = EQUIPMENT_REPAIR_PLAN_PREFIX + dto.equipmentId
+    //
+    //   const messages: string[] = []
+    //   if (schedulerRegistry.doesExist('cron', name)) {
+    //     const job = schedulerRegistry.getCronJob(name)
+    //     job.stop()
+    //     messages.push(`Job ${name} last date:` + job.lastDate())
+    //     schedulerRegistry.deleteCronJob(name)
+    //     messages.push(`Job ${name} is deleted`)
+    //   }
+    //
+    //   const newJob = new CronJob(dto.repairPlan, () => {
+    //     this.logger.warn(`time (${dto.repairPlan}) for job ${name} to run!`)
+    //   })
+    //   schedulerRegistry.addCronJob(name, newJob)
+    //   messages.push(`Job ${name} created`)
+    //   this.logger.log(messages.join(','))
+    //
+    //   return {
+    //     message: messages.join(','),
+    //   }
+    // }
     test() {
         return this.prisma.workerOrder.findUnique({
             where: {
@@ -2888,8 +3042,9 @@ CustomService = CustomService_1 = tslib_1.__decorate([
     (0, inversify_1.injectable)(),
     tslib_1.__param(0, (0, inversify_1.inject)(flowda_shared_1.PrismaClientSymbol)),
     tslib_1.__param(1, (0, inversify_1.inject)(flowda_shared_1.DataService)),
-    tslib_1.__param(2, (0, inversify_1.inject)('Factory<Logger>')),
-    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof db !== "undefined" && db.PrismaClient) === "function" ? _a : Object, typeof (_b = typeof flowda_shared_1.DataService !== "undefined" && flowda_shared_1.DataService) === "function" ? _b : Object, Function])
+    tslib_1.__param(2, (0, inversify_1.inject)('Factory<INestApplication>')),
+    tslib_1.__param(3, (0, inversify_1.inject)('Factory<Logger>')),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof db !== "undefined" && db.PrismaClient) === "function" ? _a : Object, typeof (_b = typeof flowda_shared_1.DataService !== "undefined" && flowda_shared_1.DataService) === "function" ? _b : Object, Function, Function])
 ], CustomService);
 exports.CustomService = CustomService;
 
@@ -3196,6 +3351,13 @@ module.exports = require("@nestjs/passport");
 
 /***/ }),
 
+/***/ "@nestjs/schedule":
+/***/ ((module) => {
+
+module.exports = require("@nestjs/schedule");
+
+/***/ }),
+
 /***/ "@prisma/client-wms":
 /***/ ((module) => {
 
@@ -3214,6 +3376,34 @@ module.exports = require("axios");
 /***/ ((module) => {
 
 module.exports = require("bcrypt");
+
+/***/ }),
+
+/***/ "cron-parser":
+/***/ ((module) => {
+
+module.exports = require("cron-parser");
+
+/***/ }),
+
+/***/ "cronstrue":
+/***/ ((module) => {
+
+module.exports = require("cronstrue");
+
+/***/ }),
+
+/***/ "cronstrue/locales/zh_CN":
+/***/ ((module) => {
+
+module.exports = require("cronstrue/locales/zh_CN");
+
+/***/ }),
+
+/***/ "dayjs":
+/***/ ((module) => {
+
+module.exports = require("dayjs");
 
 /***/ }),
 
@@ -3346,9 +3536,11 @@ const http_proxy_middleware_1 = __webpack_require__("http-proxy-middleware");
 const wms_services_1 = __webpack_require__("../../libs/wms-services/src/index.ts");
 const passport_jwt_1 = __webpack_require__("passport-jwt");
 const flowda_shared_1 = __webpack_require__("../../libs/flowda-shared/src/index.ts");
+const loadModule_1 = __webpack_require__("./src/loadModule.ts");
 function bootstrap() {
     return tslib_1.__awaiter(this, void 0, void 0, function* () {
         const app = yield core_1.NestFactory.create(app_module_1.AppModule);
+        (0, loadModule_1.setNestApp)(app);
         app.enableCors();
         const globalPrefix = 'api';
         app.setGlobalPrefix(globalPrefix);
